@@ -398,9 +398,9 @@ public:
 		Wall,
 		Dude,
 		Drop,
+		Phone,
 		Death,
 		Portal,
-		Phone,
 	};
 
 	struct Res {
@@ -442,9 +442,10 @@ public:
 	bool hasAnyWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasTallWall(const Pos & pos, Dir dir) const noexcept;
 	Res go(State & state, const Pos & fromPos, Dir dir, bool portal) const noexcept;
-	bool aimedByCop(const State & state, const Dude & dude) const noexcept;
+	bool aimedByCop(const State & state, const Dude & cop) const noexcept;
 	bool aimedByAnyCop(const State & state) const noexcept;
-	bool aimedBySwat(const State & state) const noexcept;
+	bool aimedBySwat(const State & state, const Dude & dude) const noexcept;
+	bool aimedByAnySwat(const State & state) const noexcept;
 	void scare(const State & state, const Pos & pos, Extra & extra) const;
 	void call(const State & state, const Dude & who, const Phone & phone, Extra & extra) const;
 	void goDude(State & state, Dude dude, Dir dir, bool called, Extra & extra);

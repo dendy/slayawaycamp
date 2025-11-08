@@ -157,6 +157,12 @@ Map App::load(const std::filesystem::path & path)
 					.pos = Pos{x, y},
 					.dir = getDir(tile.at(1)),
 				});
+			} else if (tile.at(0) == 'S') {
+				dudes.push_back(Dude {
+					.type = Dude::Type::Swat,
+					.pos = Pos{x, y},
+					.dir = getDir(tile.at(1)),
+				});
 			} else if (tile.at(0) == "D") {
 				dudes.push_back(Dude {
 					.type = Dude::Type::Drop,
@@ -419,14 +425,14 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 }
 
 
-bool App::aimedByCop(const State & state, const Dude & dude) const noexcept
+bool App::aimedByCop(const State & state, const Dude & cop) const noexcept
 {
-	assert(dude.type == Dude::Type::Cop);
-	if (hasAnyWall(dude.pos, dude.dir)) {
+	assert(cop.type == Dude::Type::Cop);
+	if (hasAnyWall(cop.pos, cop.dir)) {
 		// cannot aim through any wall
 		return false;
 	}
-	return dude.pos + shiftForDir(dude.dir) == state.killer.pos;
+	return cop.pos + shiftForDir(cop.dir) == state.killer.pos;
 }
 
 
@@ -434,15 +440,58 @@ bool App::aimedByAnyCop(const State & state) const noexcept
 {
 	for (const Dude & dude : state.dudes) {
 		if (dude.type == Dude::Type::Cop) {
-			if (aimedByCop(state, dude)) return true;
+			if (aimedByCop(state, dude)) {
+				return true;
+			}
 		}
 	}
 	return false;
 }
 
 
-bool App::aimedBySwat(const State & state) const noexcept
+bool App::aimedBySwat(const State & state, const Dude & swat) const noexcept
 {
+	Pos pos = swat.pos;
+
+	while (true) {
+		if (hasTallWall(pos, swat.dir)) {
+			break;
+		}
+
+		const Pos nextPos = pos + shiftForDir(swat.dir);
+
+		if (nextPos == state.killer.pos) {
+			return true;
+		}
+
+		{
+			const auto it = map.findPhone(nextPos);
+			if (it != map.phones.end()) {
+				break;
+			}
+		}
+
+		{
+			const auto it = state.findDude(nextPos);
+			if (it != state.dudes.end()) {
+				break;
+			}
+		}
+
+		pos = nextPos;
+	}
+
+	return false;
+}
+
+
+bool App::aimedByAnySwat(const State & state) const noexcept
+{
+	for (const Dude & dude : state.dudes) {
+		if (dude.type == Dude::Type::Swat) {
+			if (aimedBySwat(state, dude)) return true;
+		}
+	}
 	return false;
 }
 
@@ -751,13 +800,7 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 			switch (res.bump) {
 			case Bump::Wall: {
 				state.killer.pos = res.pos;
-
 				scare(state, state.killer.pos, extra);
-				processExtra(state, extra);
-
-				if (aimedByAnyCop(state)) {
-					fail = true;
-				}
 			}
 				break;
 
@@ -773,13 +816,16 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 					}
 				}
 
+				if (dude.type == Dude::Type::Swat) {
+					if (state.light) {
+						// swat kills you instantly when lights are on
+						fail = true;
+						break;
+					}
+				}
+
 				scare(state, state.killer.pos, extra);
 				extra.killed.push(dude);
-				processExtra(state, extra);
-
-				if (aimedByAnyCop(state)) {
-					fail = true;
-				}
 			}
 				break;
 
@@ -795,11 +841,6 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 						.dir = dir,
 					});
 				}
-				processExtra(state, extra);
-
-				if (aimedByAnyCop(state)) {
-					fail = true;
-				}
 			}
 				break;
 
@@ -810,11 +851,6 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 
 				scare(state, state.killer.pos, extra);
 				call(state, Dude{.type = Dude::Type::Victim, .pos = state.killer.pos}, phone, extra);
-				processExtra(state, extra);
-
-				if (aimedByAnyCop(state)) {
-					fail = true;
-				}
 			}
 				break;
 
@@ -825,6 +861,31 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 			case Bump::Portal:
 				state.killer.pos = res.pos;
 				win = true;
+				break;
+			}
+
+			switch (res.bump) {
+			case Bump::Wall:
+			case Bump::Dude:
+			case Bump::Drop:
+			case Bump::Phone: {
+				// normal bump
+				processExtra(state, extra);
+
+				// check if we stopped in front of a cop
+				if (aimedByAnyCop(state)) {
+					fail = true;
+				}
+
+				// check if we are on a line sight of a swat
+				if (aimedByAnySwat(state)) {
+					fail = true;
+				}
+			}
+				break;
+
+			case Bump::Death:
+			case Bump::Portal:
 				break;
 			}
 
