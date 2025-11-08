@@ -952,7 +952,7 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 				winMoveIds.push_back(moveRes.id);
 			}
 
-#if 0
+#if 1
 			printf("move: from: %d to: %s same: %d id: %d\n", currentMoveId, nameForDir(dir).data(), moveRes.same, moveRes.id);
 			if (!moveRes.same) {
 				const Move & m = moves[moveRes.id];
