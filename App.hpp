@@ -423,7 +423,7 @@ public:
 			Dir dir;
 		};
 		enum class Fail {
-			None, Catality, Escaped
+			None, Catality, Escaped, Cop, Swat
 		};
 		std::queue<Dude> killed;
 		std::queue<Dropped> dropped;

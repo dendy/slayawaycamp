@@ -694,6 +694,18 @@ void App::kill(State & state, const Dude dude, Extra & extra, std::queue<Extra::
 
 void App::processExtra(State & state, Extra & extra)
 {
+	// check if we stopped in front of a cop
+	if (aimedByAnyCop(state)) {
+		extra.fail = Extra::Fail::Cop;
+		return;
+	}
+
+	// check if we are on a line sight of a swat
+	if (aimedByAnySwat(state)) {
+		extra.fail = Extra::Fail::Swat;
+		return;
+	}
+
 	if (extra.killed.empty() && extra.dropped.empty() && extra.scared.empty() && extra.called.empty()) {
 		return;
 	}
@@ -910,16 +922,6 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 			case Bump::Phone: {
 				// normal bump
 				processExtra(state, extra);
-
-				// check if we stopped in front of a cop
-				if (aimedByAnyCop(state)) {
-					fail = true;
-				}
-
-				// check if we are on a line sight of a swat
-				if (aimedByAnySwat(state)) {
-					fail = true;
-				}
 			}
 				break;
 
