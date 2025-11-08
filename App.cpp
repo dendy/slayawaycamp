@@ -103,6 +103,9 @@ Map App::load(const std::filesystem::path & path)
 	static const QString kHorzSwitchWall = QString::fromUtf8(">>");
 	static const QString kVertSwitchWall = QString::fromUtf8(">");
 
+	static const QString kHorzWinWall = QString::fromUtf8("!!");
+	static const QString kVertWinWall = QString::fromUtf8("!");
+
 	static const QStringList kTileBlocks = {
 		QString::fromUtf8("██"),
 		QString::fromUtf8("▒▒"),
@@ -211,6 +214,12 @@ Map App::load(const std::filesystem::path & path)
 					.type = Wall::Type::Switch,
 					.pos = Pos{x, y},
 				});
+			} else if (wall == kHorzWinWall) {
+				hwalls.push_back(Wall {
+					.type = Wall::Type::Switch,
+					.pos = Pos{x, y},
+					.win = true,
+				});
 			} else {
 				fprintf(stderr, "Map hwall error: %d x %d\n", x, y);
 				assert(false);
@@ -242,6 +251,12 @@ Map App::load(const std::filesystem::path & path)
 				vwalls.push_back(Wall {
 					.type = Wall::Type::Switch,
 					.pos = Pos{x, y},
+				});
+			} else if (wall == kVertWinWall) {
+				vwalls.push_back(Wall {
+					.type = Wall::Type::Switch,
+					.pos = Pos{x, y},
+					.win = true,
 				});
 			} else {
 				assert(false);
@@ -350,11 +365,14 @@ bool App::hasTallWall(const Pos & pos, const Dir dir) const noexcept
 }
 
 
-void App::trySwitchLight(State & state, const Wall & wall, const Dir dir) noexcept
+void App::trySwitchLight(State & state, const Wall & wall, const Dir dir, Extra & extra) noexcept
 {
 	if (wall.type == Wall::Type::Switch) {
 		if (dir == Dir::Up || dir == Dir::Left) {
 			state.light = !state.light;
+			if (wall.win) {
+				extra.win = Extra::Win::Switch;
+			}
 		}
 	}
 }
@@ -648,7 +666,7 @@ void App::goDude(State & state, const Dude dude, const Dir dir, const bool calle
 		}
 		if (res.bump == Bump::Wall) {
 			const Wall & wall = getWall(target.pos, dir);
-			trySwitchLight(state, wall, dir);
+			trySwitchLight(state, wall, dir, extra);
 			if (wall.type == Wall::Type::Escape) {
 				if (dude.type == Dude::Type::Victim || dude.type == Dude::Type::Cat) {
 					extra.fail = Extra::Fail::Escaped;
@@ -762,6 +780,9 @@ void App::processExtra(State & state, Extra & extra)
 	if (nextExtra.fail != Extra::Fail::None) {
 		extra.fail = nextExtra.fail;
 	}
+	if (nextExtra.win != Extra::Win::None) {
+		extra.win = nextExtra.win;
+	}
 }
 
 
@@ -822,15 +843,37 @@ void App::exec() noexcept
 		.state = map.state,
 	}, false);
 
+	const auto getSteps = [&moves] (const int moveId) -> std::vector<int> {
+		std::vector<int> steps;
+		for (int id = moveId; id != -1;) {
+			steps.push_back(id);
+			id = moves[id].previousId;
+			if (moves[id].previousId == -1) break;
+		}
+		std::reverse(steps.begin(), steps.end());
+		return steps;
+	};
+
+	const auto stepsToString = [&moves] (const std::vector<int> & steps) -> std::string {
+		std::string s;
+		for (const int id : steps) {
+			const Dir dir = moves[id].dir;
+			s += shortNameForDir(dir);
+		}
+		return s;
+	};
+
 	while (!moveIdsLeft.empty()) {
 		const int currentMoveId = moveIdsLeft.front();
 		moveIdsLeft.pop();
 
 		for (const Dir dir : allDirs()) {
 #if 0
-if (currentMoveId == 9 && dir == Dir::Up) {
-	int b = 1;
-}
+		static constexpr int kDebugMoveId = 86;
+		static constexpr Dir kDebugMoveDir = Dir::Down;
+		if (currentMoveId == kDebugMoveId && dir == kDebugMoveDir) {
+			int b = 1;
+		}
 #endif
 
 			const Move & currentMove = moves[currentMoveId];
@@ -848,7 +891,7 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 			switch (res.bump) {
 			case Bump::Wall: {
 				const Wall & wall = getWall(res.pos, dir);
-				trySwitchLight(state, wall, dir);
+				trySwitchLight(state, wall, dir, extra);
 
 				state.killer.pos = res.pos;
 				scare(state, state.killer.pos, extra);
@@ -934,6 +977,10 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 				continue;
 			}
 
+			if (extra.win != Extra::Win::None) {
+				win = true;
+			}
+
 			if (!win) {
 				if (!state.hasVictims()) {
 					if (map.portal.pos == Pos::null()) {
@@ -952,7 +999,10 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 				winMoveIds.push_back(moveRes.id);
 			}
 
-#if 1
+#if 0
+			   static const std::string_view kExpectedSteps = "ldurdrdl";
+			// static const std::string_view kExpectedSteps = "ldurdrdld";
+
 			printf("move: from: %d to: %s same: %d id: %d\n", currentMoveId, nameForDir(dir).data(), moveRes.same, moveRes.id);
 			if (!moveRes.same) {
 				const Move & m = moves[moveRes.id];
@@ -974,7 +1024,13 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 					printf("\n");
 				}
 			}
-			// printf("queue: size: %d front: %d back: %d\n", int(moveIdsLeft.size()), moveIdsLeft.front(), moveIdsLeft.back());
+			fflush(stdout);
+
+			const std::vector<int> steps = getSteps(moveRes.id);
+			const std::string stepsString = stepsToString(steps);
+			if (stepsString == kExpectedSteps) {
+				int b = 1;
+			}
 #endif
 		}
 	}

@@ -94,6 +94,18 @@ inline std::string_view nameForDir(const Dir & dir) noexcept
 }
 
 
+inline char shortNameForDir(const Dir & dir) noexcept
+{
+	switch (dir) {
+	case Dir::Left:  return 'l';
+	case Dir::Right: return 'r';
+	case Dir::Up:    return 'u';
+	case Dir::Down:  return 'd';
+	}
+	assert(false);
+}
+
+
 inline std::string_view nameForOrientation(const Orientation & orientation) noexcept
 {
 	switch (orientation) {
@@ -258,6 +270,7 @@ struct Wall {
 
 	Type type;
 	Pos pos;
+	bool win = false;
 
 	bool operator==(const Wall & other) const noexcept
 	{
@@ -425,11 +438,15 @@ public:
 		enum class Fail {
 			None, Catality, Escaped, Cop, Swat
 		};
+		enum class Win {
+			None, Switch
+		};
 		std::queue<Dude> killed;
 		std::queue<Dropped> dropped;
 		std::queue<Scared> scared;
 		std::queue<Called> called;
 		Fail fail = Fail::None;
+		Win win = Win::None;
 	};
 
 	App(const std::filesystem::path & path);
@@ -441,7 +458,7 @@ public:
 	const Wall & getWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasAnyWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasTallWall(const Pos & pos, Dir dir) const noexcept;
-	void trySwitchLight(State & state, const Wall & wall, Dir dir) noexcept;
+	void trySwitchLight(State & state, const Wall & wall, Dir dir, Extra & extra) noexcept;
 	Res go(State & state, const Pos & fromPos, Dir dir, bool portal) const noexcept;
 	bool aimedByCop(const State & state, const Dude & cop) const noexcept;
 	bool aimedByAnyCop(const State & state) const noexcept;
