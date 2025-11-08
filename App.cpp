@@ -64,6 +64,7 @@ Map App::load(const std::filesystem::path & path)
 	const auto getColor = [] (const QChar & s) -> Color {
 		if (s == "b") return Color::Blue;
 		if (s == "r") return Color::Red;
+		if (s == "y") return Color::Yellow;
 		assert(false);
 	};
 

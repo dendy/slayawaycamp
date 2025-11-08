@@ -26,7 +26,7 @@ enum class Orientation {
 
 
 enum class Color {
-	Blue, Red
+	Blue, Red, Yellow
 };
 
 
