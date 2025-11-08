@@ -5,5 +5,5 @@ project(slayawaycamp)
 
 find_package(Qt5 REQUIRED Core)
 
-add_executable(slayawaycamp main.cpp)
+add_executable(slayawaycamp main.cpp App.cpp)
 target_link_libraries(slayawaycamp PRIVATE Qt5::Core)
