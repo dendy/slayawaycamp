@@ -329,6 +329,7 @@ struct State {
 	{
 		if (killer != other.killer) return false;
 		if (dudes != other.dudes) return false;
+		if (mines != other.mines) return false;
 		if (light != other.light) return false;
 		return true;
 	}

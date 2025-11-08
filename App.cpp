@@ -830,6 +830,13 @@ void App::exec() noexcept
 		bool same;
 	};
 
+// #define ENABLE_DEBUG
+
+#ifdef ENABLE_DEBUG
+	static constexpr int kDebugMoveId = 39;
+	static constexpr Dir kDebugMoveDir = Dir::Down;
+#endif
+
 	const auto addMove = [&moveIdForState, &moves, &moveIdsLeft, &moveDistance](
 			Move && move, const bool win) -> MoveRes {
 		const auto it = moveIdForState.find(move.state);
@@ -865,8 +872,6 @@ void App::exec() noexcept
 		.state = map.state,
 	}, false);
 
-// #define ENABLE_DEBUG
-
 #ifdef ENABLE_DEBUG
 	const auto getSteps = [&moves] (const int moveId) -> std::vector<int> {
 		std::vector<int> steps;
@@ -895,8 +900,6 @@ void App::exec() noexcept
 
 		for (const Dir dir : allDirs()) {
 #ifdef ENABLE_DEBUG
-		static constexpr int kDebugMoveId = 86;
-		static constexpr Dir kDebugMoveDir = Dir::Down;
 		if (currentMoveId == kDebugMoveId && dir == kDebugMoveDir) {
 			int b = 1;
 		}
@@ -1026,7 +1029,8 @@ void App::exec() noexcept
 			}
 
 #ifdef ENABLE_DEBUG
-			static const std::string_view kExpectedSteps = "u";
+			static const std::string_view kExpectedSteps = "rdlurdlr";
+			// static const std::string_view kExpectedSteps = "rdlurdlrulurdl";
 
 			printf("move: from: %d to: %s same: %d id: %d\n", currentMoveId, nameForDir(dir).data(), moveRes.same, moveRes.id);
 			if (!moveRes.same) {
