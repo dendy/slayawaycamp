@@ -526,11 +526,6 @@ bool App::aimedByAnySwat(const State & state) const noexcept
 
 void App::scare(const State & state, const Pos & pos, Extra & extra) const
 {
-	if (!state.light) {
-		// cannot scare anyone when lights are off
-		return;
-	}
-
 	for (const Dir dir : allDirs()) {
 		if (hasTallWall(pos, dir)) {
 			continue;
@@ -543,9 +538,16 @@ void App::scare(const State & state, const Pos & pos, Extra & extra) const
 		}
 
 		const Dude & dude = *it;
-		if (dude.type != Dude::Type::Victim and dude.type != Dude::Type::Cat) {
-			// cannot scare
+		if (dude.type != Dude::Type::Victim && dude.type != Dude::Type::Cat) {
+			// can scare only victims and cats
 			continue;
+		}
+
+		if (dude.type == Dude::Type::Victim) {
+			if (!state.light) {
+				// cannot scare victim when lights are off, but cats still see in the dark
+				continue;
+			}
 		}
 
 		extra.scared.push(Extra::Scared {
