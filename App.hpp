@@ -265,7 +265,7 @@ struct Wall {
 		Escape,
 		Switch,
 		Short,
-		Electro,
+		Zap,
 	};
 
 	Type type;

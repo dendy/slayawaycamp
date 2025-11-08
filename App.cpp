@@ -106,6 +106,9 @@ Map App::load(const std::filesystem::path & path)
 	static const QString kHorzWinWall = QString::fromUtf8("!!");
 	static const QString kVertWinWall = QString::fromUtf8("!");
 
+	static const QString kHorzZapWall = QString::fromUtf8("zz");
+	static const QString kVertZapWall = QString::fromUtf8("z");
+
 	static const QStringList kTileBlocks = {
 		QString::fromUtf8("██"),
 		QString::fromUtf8("▒▒"),
@@ -220,6 +223,11 @@ Map App::load(const std::filesystem::path & path)
 					.pos = Pos{x, y},
 					.win = true,
 				});
+			} else if (wall == kHorzZapWall) {
+				hwalls.push_back(Wall {
+					.type = Wall::Type::Zap,
+					.pos = Pos{x, y},
+				});
 			} else {
 				fprintf(stderr, "Map hwall error: %d x %d\n", x, y);
 				assert(false);
@@ -257,6 +265,11 @@ Map App::load(const std::filesystem::path & path)
 					.type = Wall::Type::Switch,
 					.pos = Pos{x, y},
 					.win = true,
+				});
+			} else if (wall == kVertZapWall) {
+				vwalls.push_back(Wall {
+					.type = Wall::Type::Zap,
+					.pos = Pos{x, y},
 				});
 			} else {
 				assert(false);
@@ -357,7 +370,7 @@ bool App::hasTallWall(const Pos & pos, const Dir dir) const noexcept
 			return true;
 		case Wall::Type::Escape:
 		case Wall::Type::Short:
-		case Wall::Type::Electro:
+		case Wall::Type::Zap:
 			return false;
 		}
 		assert(false);
@@ -386,6 +399,15 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 
 	while (true) {
 		if (hasAnyWall(pos, dir)) {
+			const Wall & wall = getWall(pos, dir);
+			if (state.light && wall.type == Wall::Type::Zap) {
+				// bumped into electric wire wall
+				return Res {
+					.bump = Bump::Death,
+					.pos = pos,
+				};
+			}
+
 			// bumped into a wall
 			return Res {
 				.bump = Bump::Wall,
@@ -843,6 +865,9 @@ void App::exec() noexcept
 		.state = map.state,
 	}, false);
 
+// #define ENABLE_DEBUG
+
+#ifdef ENABLE_DEBUG
 	const auto getSteps = [&moves] (const int moveId) -> std::vector<int> {
 		std::vector<int> steps;
 		for (int id = moveId; id != -1;) {
@@ -862,13 +887,14 @@ void App::exec() noexcept
 		}
 		return s;
 	};
+#endif
 
 	while (!moveIdsLeft.empty()) {
 		const int currentMoveId = moveIdsLeft.front();
 		moveIdsLeft.pop();
 
 		for (const Dir dir : allDirs()) {
-#if 0
+#ifdef ENABLE_DEBUG
 		static constexpr int kDebugMoveId = 86;
 		static constexpr Dir kDebugMoveDir = Dir::Down;
 		if (currentMoveId == kDebugMoveId && dir == kDebugMoveDir) {
@@ -999,9 +1025,8 @@ void App::exec() noexcept
 				winMoveIds.push_back(moveRes.id);
 			}
 
-#if 0
-			   static const std::string_view kExpectedSteps = "ldurdrdl";
-			// static const std::string_view kExpectedSteps = "ldurdrdld";
+#ifdef ENABLE_DEBUG
+			static const std::string_view kExpectedSteps = "u";
 
 			printf("move: from: %d to: %s same: %d id: %d\n", currentMoveId, nameForDir(dir).data(), moveRes.same, moveRes.id);
 			if (!moveRes.same) {
