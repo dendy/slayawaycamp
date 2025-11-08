@@ -100,6 +100,9 @@ Map App::load(const std::filesystem::path & path)
 	static const QString kHorzEscapeWall = QString::fromUtf8("ee");
 	static const QString kVertEscapeWall = QString::fromUtf8("e");
 
+	static const QString kHorzSwitchWall = QString::fromUtf8(">>");
+	static const QString kVertSwitchWall = QString::fromUtf8(">");
+
 	static const QStringList kTileBlocks = {
 		QString::fromUtf8("██"),
 		QString::fromUtf8("▒▒"),
@@ -203,6 +206,11 @@ Map App::load(const std::filesystem::path & path)
 					.type = Wall::Type::Escape,
 					.pos = Pos{x, y},
 				});
+			} else if (wall == kHorzSwitchWall) {
+				hwalls.push_back(Wall {
+					.type = Wall::Type::Switch,
+					.pos = Pos{x, y},
+				});
 			} else {
 				fprintf(stderr, "Map hwall error: %d x %d\n", x, y);
 				assert(false);
@@ -228,6 +236,11 @@ Map App::load(const std::filesystem::path & path)
 			} else if (wall == kVertEscapeWall) {
 				vwalls.push_back(Wall {
 					.type = Wall::Type::Escape,
+					.pos = Pos{x, y},
+				});
+			} else if (wall == kVertSwitchWall) {
+				vwalls.push_back(Wall {
+					.type = Wall::Type::Switch,
 					.pos = Pos{x, y},
 				});
 			} else {
@@ -337,6 +350,16 @@ bool App::hasTallWall(const Pos & pos, const Dir dir) const noexcept
 }
 
 
+void App::trySwitchLight(State & state, const Wall & wall, const Dir dir) noexcept
+{
+	if (wall.type == Wall::Type::Switch) {
+		if (dir == Dir::Up || dir == Dir::Left) {
+			state.light = !state.light;
+		}
+	}
+}
+
+
 App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool portal) const noexcept
 {
 	const Pos shift = shiftForDir(dir);
@@ -429,6 +452,10 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 bool App::aimedByCop(const State & state, const Dude & cop) const noexcept
 {
 	assert(cop.type == Dude::Type::Cop);
+	if (!state.light) {
+		// cops cannot aim when lights are off
+		return false;
+	}
 	if (hasAnyWall(cop.pos, cop.dir)) {
 		// cannot aim through any wall
 		return false;
@@ -499,6 +526,11 @@ bool App::aimedByAnySwat(const State & state) const noexcept
 
 void App::scare(const State & state, const Pos & pos, Extra & extra) const
 {
+	if (!state.light) {
+		// cannot scare anyone when lights are off
+		return;
+	}
+
 	for (const Dir dir : allDirs()) {
 		if (hasTallWall(pos, dir)) {
 			continue;
@@ -613,9 +645,10 @@ void App::goDude(State & state, const Dude dude, const Dir dir, const bool calle
 			}
 		}
 		if (res.bump == Bump::Wall) {
-			if (dude.type == Dude::Type::Victim || dude.type == Dude::Type::Cat) {
-				const Wall & wall = getWall(target.pos, dir);
-				if (wall.type == Wall::Type::Escape) {
+			const Wall & wall = getWall(target.pos, dir);
+			trySwitchLight(state, wall, dir);
+			if (wall.type == Wall::Type::Escape) {
+				if (dude.type == Dude::Type::Victim || dude.type == Dude::Type::Cat) {
 					extra.fail = Extra::Fail::Escaped;
 				}
 			}
@@ -800,6 +833,9 @@ if (currentMoveId == 9 && dir == Dir::Up) {
 
 			switch (res.bump) {
 			case Bump::Wall: {
+				const Wall & wall = getWall(res.pos, dir);
+				trySwitchLight(state, wall, dir);
+
 				state.killer.pos = res.pos;
 				scare(state, state.killer.pos, extra);
 			}

@@ -441,6 +441,7 @@ public:
 	const Wall & getWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasAnyWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasTallWall(const Pos & pos, Dir dir) const noexcept;
+	void trySwitchLight(State & state, const Wall & wall, Dir dir) noexcept;
 	Res go(State & state, const Pos & fromPos, Dir dir, bool portal) const noexcept;
 	bool aimedByCop(const State & state, const Dude & cop) const noexcept;
 	bool aimedByAnyCop(const State & state) const noexcept;
