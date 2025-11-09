@@ -72,6 +72,7 @@ Map App::load(const std::filesystem::path & path)
 	static const QString kKK = QString::fromUtf8("KK");
 	static const QString kPP = QString::fromUtf8("PP");
 	static const QString kKP = QString::fromUtf8("KP");
+	static const QString kKg = QString::fromUtf8("Kg");
 	static const QStringList kTraps = {
 		QString::fromUtf8("TT"),
 		QString::fromUtf8("xx"),
@@ -147,6 +148,12 @@ Map App::load(const std::filesystem::path & path)
 				killer.pos = Pos{x, y};
 				assert(portal.pos == Pos::null());
 				portal.pos = Pos{x, y};
+			} else if (tile == kKg) {
+				assert(killer.pos == Pos::null());
+				killer.pos = Pos{x, y};
+				gums.push_back(Gum {
+					.pos = Pos{x, y},
+				});
 			} else if (kTraps.contains(tile)) {
 				traps.push_back(Trap{Pos{x, y}});
 			} else if (tile == kVV) {
