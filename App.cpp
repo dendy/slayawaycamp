@@ -46,6 +46,7 @@ Map App::load(const std::filesystem::path & path)
 	std::vector<Wall> vwalls;
 	std::vector<Trap> traps;
 	std::vector<Phone> phones;
+	std::vector<Gum> gums;
 
 	const auto getDir = [] (const QChar & s) -> Dir {
 		if (s == "l") return Dir::Left;
@@ -78,6 +79,7 @@ Map App::load(const std::filesystem::path & path)
 	static const QString kVV = QString::fromUtf8("VV");
 	static const QString kCat = QString::fromUtf8("^^");
 	static const QString kMine = QString::fromUtf8("<>");
+	static const QString kGum = QString::fromUtf8("gg");
 
 	static const QStringList kHorzWalls = {
 		QString::fromUtf8("=="),
@@ -159,6 +161,10 @@ Map App::load(const std::filesystem::path & path)
 				});
 			} else if (tile == kMine) {
 				mines.push_back(Mine {
+					.pos = Pos{x, y},
+				});
+			} else if (tile == kGum) {
+				gums.push_back(Gum {
 					.pos = Pos{x, y},
 				});
 			} else if (tile.at(0) == 'C') {
@@ -287,6 +293,7 @@ Map App::load(const std::filesystem::path & path)
 		.vwalls = std::move(vwalls),
 		.traps = std::move(traps),
 		.phones = std::move(phones),
+		.gums = std::move(gums),
 		.portal = std::move(portal),
 		.state = State {
 			.killer= std::move(killer),
@@ -483,6 +490,17 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 				.pos = pos,
 			};
 		}
+
+		{
+			const auto it = std::find_if(map.gums.begin(), map.gums.end(),
+					[&nextPos] (const Gum & gum) { return gum.pos == nextPos; });
+			if (it != map.gums.end()) {
+				return Res {
+					.bump = Bump::Gum,
+					.pos = pos,
+				};
+			}
+		}
 	}
 
 	assert(false);
@@ -658,7 +676,8 @@ void App::goDude(State & state, const Dude dude, const Dir dir, const bool calle
 	case Bump::Dude:
 	case Bump::Death:
 	case Bump::Drop:
-	case Bump::Phone: {
+	case Bump::Phone:
+	case Bump::Gum: {
 		const Dude target = Dude {
 			.type = dude.type,
 			.pos = res.pos,
@@ -918,6 +937,12 @@ void App::exec() noexcept
 			Extra extra;
 
 			switch (res.bump) {
+			case Bump::Gum : {
+				state.killer.pos = res.pos;
+				scare(state, state.killer.pos, extra);
+			}
+				break;
+
 			case Bump::Wall: {
 				const Wall & wall = getWall(res.pos, dir);
 				trySwitchLight(state, wall, dir, extra);
@@ -991,7 +1016,8 @@ void App::exec() noexcept
 			case Bump::Wall:
 			case Bump::Dude:
 			case Bump::Drop:
-			case Bump::Phone: {
+			case Bump::Phone:
+			case Bump::Gum: {
 				// normal bump
 				processExtra(state, extra);
 			}

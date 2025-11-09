@@ -281,6 +281,13 @@ struct Wall {
 
 
 
+struct Gum {
+	Pos pos;
+};
+
+
+
+
 struct State {
 	Killer killer;
 	std::vector<Dude> dudes;
@@ -369,6 +376,7 @@ struct Map {
 	std::vector<Wall> vwalls;
 	std::vector<Trap> traps;
 	std::vector<Phone> phones;
+	std::vector<Gum> gums;
 	Portal portal;
 	State state;
 
@@ -415,6 +423,7 @@ public:
 		Phone,
 		Death,
 		Portal,
+		Gum,
 	};
 
 	struct Res {
