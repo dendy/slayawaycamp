@@ -1101,7 +1101,7 @@ void App::exec() noexcept
 		return moveDistance(a) < moveDistance(b);
 	});
 
-	static constexpr int kShowStepsVerbosity = 2;
+	static constexpr int kShowStepsVerbosity = 0;
 	static constexpr int kShowStepsCount = -1;
 
 	printf("moves: total: %d win: %d\n", int(moves.size()), int(winMoveIds.size()));
