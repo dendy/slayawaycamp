@@ -1068,19 +1068,30 @@ void App::exec() noexcept
 		return moveDistance(a) < moveDistance(b);
 	});
 
+	static constexpr int kShowStepsVerbosity = 2;
+	static constexpr int kShowStepsCount = -1;
+
 	printf("moves: total: %d win: %d\n", int(moves.size()), int(winMoveIds.size()));
-	for (const int winMoveId : winMoveIds) {
-		std::vector<int> seq;
-		for (int id = winMoveId; id != -1;) {
-			seq.push_back(id);
-			id = moves[id].previousId;
-			if (moves[id].previousId == -1) break;
-		}
-		std::reverse(seq.begin(), seq.end());
-		printf("win move: %d (steps: %d)\n", winMoveId, moveDistance(winMoveId));
-		for (const int id : seq) {
-			const Dir dir = moves[id].dir;
-			printf("    % 4d %s\n", id, nameForDir(dir).data());
+	if (kShowStepsVerbosity > 0) {
+		for (const int winMoveId : winMoveIds) {
+			std::vector<int> seq;
+			for (int id = winMoveId; id != -1;) {
+				seq.push_back(id);
+				id = moves[id].previousId;
+				if (moves[id].previousId == -1) break;
+			}
+			std::reverse(seq.begin(), seq.end());
+			printf("win move: %d (steps: %d)\n", winMoveId, moveDistance(winMoveId));
+			if (kShowStepsVerbosity > 1) {
+				int stepIndex = 0;
+				for (const int id : seq) {
+					const Dir dir = moves[id].dir;
+					if (kShowStepsCount == -1 || stepIndex < kShowStepsCount) {
+						printf("    % 4d %s\n", id, nameForDir(dir).data());
+					}
+					stepIndex++;
+				}
+			}
 		}
 	}
 }
