@@ -2,6 +2,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <queue>
 #include <vector>
@@ -423,8 +424,16 @@ struct Move {
 
 
 
+inline static constexpr std::initializer_list<Dir> kAllDirs = {Dir::Left, Dir::Right, Dir::Up, Dir::Down};
+inline static constexpr std::initializer_list<Color> kAllColors = {Color::Blue, Color::Red, Color::Yellow};
+
+
+
+
 class App {
 public:
+	inline static constexpr int kMaxTeleportCount = kAllColors.size() * 2;
+
 	enum class Bump {
 		Wall,
 		Dude,
@@ -433,13 +442,13 @@ public:
 		Death,
 		Portal,
 		Gum,
-		Teleport,
 	};
 
 	struct Res {
 		Bump bump;
 		Pos pos;
 		Pos target;
+		std::array<Teleport, kMaxTeleportCount> teleports;
 	};
 
 	struct Extra {
@@ -453,11 +462,6 @@ public:
 		};
 		struct Called {
 			Dude dude;
-			Dir dir;
-		};
-		struct Teleported {
-			Dude dude;
-			Pos pos;
 			Dir dir;
 		};
 		enum class Fail {
@@ -477,8 +481,8 @@ public:
 	App(const std::filesystem::path & path);
 
 	static Map load(const std::filesystem::path & path);
-	static const std::initializer_list<Dir> & allDirs() noexcept;
 
+	const Teleport & getOtherTeleport(const Teleport & teleport) const noexcept;
 	const Wall * findWall(const Pos & pos, Dir dir) const noexcept;
 	const Wall & getWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasAnyWall(const Pos & pos, Dir dir) const noexcept;

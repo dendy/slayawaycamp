@@ -304,6 +304,23 @@ Map App::load(const std::filesystem::path & path)
 		}
 	}
 
+	for (const Color color : kAllColors) {
+		{
+			const int count = std::count_if(phones.begin(), phones.end(),
+					[color] (const Phone & phone) {
+						return phone.color == color;
+					});
+			assert(count == 0 || count == 2);
+		}
+		{
+			const int count = std::count_if(teleports.begin(), teleports.end(),
+					[color] (const Teleport & teleport) {
+						return teleport.color == color;
+					});
+			assert(count == 0 || count == 2);
+		}
+	}
+
 	std::sort(dudes.begin(), dudes.end());
 	std::sort(mines.begin(), mines.end());
 
@@ -333,10 +350,15 @@ App::App(const std::filesystem::path & path) :
 }
 
 
-const std::initializer_list<Dir> & App::allDirs() noexcept
+const Teleport & App::getOtherTeleport(const Teleport & teleport) const noexcept
 {
-	static const auto list = {Dir::Left, Dir::Right, Dir::Up, Dir::Down};
-	return list;
+	const auto it = std::find_if(map.teleports.begin(), map.teleports.end(),
+			[&teleport] (const Teleport & t) {
+				if (t.pos == teleport.pos) return false;
+				return t.color == teleport.color;
+			});
+	assert(it != map.teleports.end());
+	return *it;
 }
 
 
@@ -422,39 +444,44 @@ void App::trySwitchLight(State & state, const Wall & wall, const Dir dir, Extra 
 
 App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool portal) const noexcept
 {
-	// std::array<bool, kMaxMapSize * kMaxMapSize> visited;
-	// std::memset(visited.data(), 0, sizeof(bool) * visited.size());
+	std::array<Teleport, kMaxTeleportCount> visitedTeleports;
+	std::for_each(visitedTeleports.begin(), visitedTeleports.end(),
+			[] (Teleport & t) { t.pos = Pos::null(); });
 
-	// const auto visit = [&visited] (const Pos & pos) {
-	// 	bool & v = visited[pos.x + pos.y * kMaxMapSize];
-	// 	assert(!v);
-	// 	v = true;
-	// };
+	const auto addTeleport = [&visitedTeleports] (const Teleport & teleport) {
+		const auto it = std::find_if(visitedTeleports.begin(), visitedTeleports.end(),
+				[] (const Teleport & t) { return t.pos == Pos::null(); });
+		assert(it != visitedTeleports.end());
+		*it = teleport;
+	};
 
 	const Pos shift = shiftForDir(dir);
 
 	Pos pos = fromPos;
 
 	while (true) {
+		const Pos nextPos = pos + shift;
+
+		const auto makeRes = [&pos, &nextPos, &visitedTeleports] (
+				const Bump & bump) -> Res {
+			return Res {
+				.bump = bump,
+				.pos = pos,
+				.target = nextPos,
+				.teleports = std::move(visitedTeleports),
+			};
+		};
+
 		if (hasAnyWall(pos, dir)) {
 			const Wall & wall = getWall(pos, dir);
 			if (state.light && wall.type == Wall::Type::Zap) {
 				// bumped into electric wire wall
-				return Res {
-					.bump = Bump::Death,
-					.pos = pos,
-				};
+				return makeRes(Bump::Death);
 			}
 
 			// bumped into a wall
-			return Res {
-				.bump = Bump::Wall,
-				.pos = pos,
-			};
+			return makeRes(Bump::Wall);
 		}
-
-		const Pos nextPos = pos + shift;
-		// visit(nextPos);
 
 		{
 			const auto it = state.findDude(nextPos);
@@ -463,17 +490,9 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 				const Dude & dude = *it;
 
 				if (dude.type == Dude::Type::Drop) {
-					return Res {
-						.bump = Bump::Drop,
-						.pos = pos,
-						.target = nextPos,
-					};
+					return makeRes(Bump::Drop);
 				} else {
-					return Res {
-						.bump = Bump::Dude,
-						.pos = pos,
-						.target = nextPos,
-					};
+					return makeRes(Bump::Dude);
 				}
 			}
 		}
@@ -481,11 +500,7 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 		{
 			const auto it = map.findPhone(nextPos);
 			if (it != map.phones.end()) {
-				return Res {
-					.bump = Bump::Phone,
-					.pos = pos,
-					.target = nextPos,
-				};
+				return makeRes(Bump::Phone);
 			}
 		}
 
@@ -496,10 +511,7 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 			const auto it = std::find(map.traps.begin(), map.traps.end(), trap);
 			if (it != map.traps.end()) {
 				// got into a trap
-				return Res {
-					.bump = Bump::Death,
-					.pos = pos,
-				};
+				return makeRes(Bump::Death);
 			}
 		}
 
@@ -509,28 +521,34 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 			if (it != state.mines.end()) {
 				// steppen on a mine
 				state.mines.erase(it);
-				return Res {
-					.bump = Bump::Death,
-					.pos = pos,
-				};
+				return makeRes(Bump::Death);
+			}
+		}
+
+		{
+			const auto it = std::find_if(map.teleports.begin(), map.teleports.end(),
+					[&pos] (const Teleport & teleport) {
+						return teleport.pos == pos;
+					});
+			if (it != map.teleports.end()) {
+				const Teleport & teleport = *it;
+				const Teleport & otherTeleport = getOtherTeleport(teleport);
+				addTeleport(teleport);
+				addTeleport(otherTeleport);
+				pos = otherTeleport.pos;
+				continue;
 			}
 		}
 
 		if (portal && pos == map.portal.pos) {
-			return Res {
-				.bump = Bump::Portal,
-				.pos = pos,
-			};
+			return makeRes(Bump::Portal);
 		}
 
 		{
 			const auto it = std::find_if(map.gums.begin(), map.gums.end(),
 					[&nextPos] (const Gum & gum) { return gum.pos == nextPos; });
 			if (it != map.gums.end()) {
-				return Res {
-					.bump = Bump::Gum,
-					.pos = pos,
-				};
+				return makeRes(Bump::Gum);
 			}
 		}
 	}
@@ -616,7 +634,7 @@ bool App::aimedByAnySwat(const State & state) const noexcept
 
 void App::scare(const State & state, const Pos & pos, Extra & extra) const
 {
-	for (const Dir dir : allDirs()) {
+	for (const Dir dir : kAllDirs) {
 		if (hasTallWall(pos, dir)) {
 			continue;
 		}
@@ -654,7 +672,7 @@ void App::call(const State & state, const Dude & who, const Phone & phone, Extra
 		if (otherPhone.pos == phone.pos) continue;
 		if (otherPhone.color != phone.color) continue;
 
-		for (const Dir dir : allDirs()) {
+		for (const Dir dir : kAllDirs) {
 			Pos pos = otherPhone.pos;
 
 			while (true) {
@@ -949,7 +967,7 @@ void App::exec() noexcept
 		const int currentMoveId = moveIdsLeft.front();
 		moveIdsLeft.pop();
 
-		for (const Dir dir : allDirs()) {
+		for (const Dir dir : kAllDirs) {
 #ifdef ENABLE_DEBUG
 		if (currentMoveId == kDebugMoveId && dir == kDebugMoveDir) {
 			int b = 1;
@@ -967,6 +985,13 @@ void App::exec() noexcept
 			const Res res = go(state, state.killer.pos, dir, !state.hasVictims());
 
 			Extra extra;
+
+			for (const Teleport & teleport : res.teleports) {
+				if (teleport.pos == Pos::null()) break;
+				if (teleport.pos != res.pos) {
+					scare(state, teleport.pos, extra);
+				}
+			}
 
 			switch (res.bump) {
 			case Bump::Gum : {
