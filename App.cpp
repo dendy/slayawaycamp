@@ -1,9 +1,15 @@
 
 #include "App.hpp"
 
+#include <cstring>
 #include <fstream>
 
 #include <QStringList>
+
+
+
+
+static constexpr int kMaxMapSize = 16;
 
 
 
@@ -28,9 +34,11 @@ Map App::load(const std::filesystem::path & path)
 
 	assert((maxLength - 1) % 3 == 0);
 	const int width = (maxLength - 1) / 3;
+	assert(width <= kMaxMapSize);
 
 	assert((lines.size() - 1) % 2 == 0);
 	const int height = (lines.size() - 1) / 2;
+	assert(height <= kMaxMapSize);
 
 	Killer killer {
 		.pos = Pos::null(),
@@ -47,6 +55,7 @@ Map App::load(const std::filesystem::path & path)
 	std::vector<Trap> traps;
 	std::vector<Phone> phones;
 	std::vector<Gum> gums;
+	std::vector<Teleport> teleports;
 
 	const auto getDir = [] (const QChar & s) -> Dir {
 		if (s == "l") return Dir::Left;
@@ -197,6 +206,11 @@ Map App::load(const std::filesystem::path & path)
 					.pos = Pos{x, y},
 					.color = getColor(tile.at(1)),
 				});
+			} else if (tile.at(0) == "T") {
+				teleports.push_back(Teleport {
+					.pos = Pos{x, y},
+					.color = getColor(tile.at(1)),
+				});
 			} else {
 				assert(false);
 			}
@@ -301,6 +315,7 @@ Map App::load(const std::filesystem::path & path)
 		.traps = std::move(traps),
 		.phones = std::move(phones),
 		.gums = std::move(gums),
+		.teleports = std::move(teleports),
 		.portal = std::move(portal),
 		.state = State {
 			.killer= std::move(killer),
@@ -407,6 +422,15 @@ void App::trySwitchLight(State & state, const Wall & wall, const Dir dir, Extra 
 
 App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool portal) const noexcept
 {
+	// std::array<bool, kMaxMapSize * kMaxMapSize> visited;
+	// std::memset(visited.data(), 0, sizeof(bool) * visited.size());
+
+	// const auto visit = [&visited] (const Pos & pos) {
+	// 	bool & v = visited[pos.x + pos.y * kMaxMapSize];
+	// 	assert(!v);
+	// 	v = true;
+	// };
+
 	const Pos shift = shiftForDir(dir);
 
 	Pos pos = fromPos;
@@ -430,6 +454,7 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 		}
 
 		const Pos nextPos = pos + shift;
+		// visit(nextPos);
 
 		{
 			const auto it = state.findDude(nextPos);
@@ -1062,8 +1087,8 @@ void App::exec() noexcept
 			}
 
 #ifdef ENABLE_DEBUG
-			static const std::string_view kExpectedSteps = "rdlurdlr";
-			// static const std::string_view kExpectedSteps = "rdlurdlrulurdl";
+			// static const std::string_view kExpectedSteps = "rd";
+			static const std::string_view kExpectedSteps = "urdludluludruldrd";
 
 			printf("move: from: %d to: %s same: %d id: %d\n", currentMoveId, nameForDir(dir).data(), moveRes.same, moveRes.id);
 			if (!moveRes.same) {
@@ -1088,6 +1113,7 @@ void App::exec() noexcept
 			}
 			fflush(stdout);
 
+			const Move & m = moves[moveRes.id];
 			const std::vector<int> steps = getSteps(moveRes.id);
 			const std::string stepsString = stepsToString(steps);
 			if (stepsString == kExpectedSteps) {
@@ -1101,7 +1127,7 @@ void App::exec() noexcept
 		return moveDistance(a) < moveDistance(b);
 	});
 
-	static constexpr int kShowStepsVerbosity = 0;
+	static constexpr int kShowStepsVerbosity = 2;
 	static constexpr int kShowStepsCount = -1;
 
 	printf("moves: total: %d win: %d\n", int(moves.size()), int(winMoveIds.size()));

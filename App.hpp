@@ -288,6 +288,14 @@ struct Gum {
 
 
 
+struct Teleport {
+	Pos pos;
+	Color color;
+};
+
+
+
+
 struct State {
 	Killer killer;
 	std::vector<Dude> dudes;
@@ -377,6 +385,7 @@ struct Map {
 	std::vector<Trap> traps;
 	std::vector<Phone> phones;
 	std::vector<Gum> gums;
+	std::vector<Teleport> teleports;
 	Portal portal;
 	State state;
 
@@ -424,6 +433,7 @@ public:
 		Death,
 		Portal,
 		Gum,
+		Teleport,
 	};
 
 	struct Res {
@@ -443,6 +453,11 @@ public:
 		};
 		struct Called {
 			Dude dude;
+			Dir dir;
+		};
+		struct Teleported {
+			Dude dude;
+			Pos pos;
 			Dir dir;
 		};
 		enum class Fail {
