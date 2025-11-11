@@ -432,7 +432,7 @@ inline static constexpr std::initializer_list<Color> kAllColors = {Color::Blue, 
 
 class App {
 public:
-	inline static constexpr int kMaxTeleportCount = kAllColors.size() * 2;
+	inline static constexpr int kMaxTeleportCount = kAllColors.size() * 4;
 
 	enum class Bump {
 		Wall,
