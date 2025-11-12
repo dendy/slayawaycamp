@@ -4,6 +4,7 @@
 #include <charconv>
 #include <fstream>
 #include <map>
+#include <queue>
 
 #include <QStringList>
 
@@ -16,6 +17,7 @@ static constexpr int kMaxMapSize = 16;
 
 
 static const QString kEmptyTile    = QString::fromUtf8("..");
+static const QString kBlockTile    = QString::fromUtf8("░░");
 
 static const QString kKiller       = QString::fromUtf8("KK");
 static const QString kPortal       = QString::fromUtf8("PP");
@@ -32,6 +34,9 @@ static const QString kGum          = QString::fromUtf8("gg");
 static const QString kCop          = QString::fromUtf8("C");
 static const QString kSwat         = QString::fromUtf8("S");
 static const QString kDrop         = QString::fromUtf8("D");
+
+static const QString kBlockHorzWall = QString::fromUtf8("░░");
+static const QString kBlockVertWall = QString::fromUtf8("░");
 
 static const QStringList kHorzWalls = {
 	QString::fromUtf8("══"),
@@ -52,17 +57,14 @@ static const QStringList kVertShortWalls = {
 	QString::fromUtf8("}"),
 };
 
-static const QString kHorzWinWall = QString::fromUtf8("!!");
-static const QString kVertWinWall = QString::fromUtf8("!");
-
+static const QString kHorzWinWall    = QString::fromUtf8("!!");
+static const QString kVertWinWall    = QString::fromUtf8("!");
 static const QString kHorzEscapeWall = QString::fromUtf8("ee");
 static const QString kVertEscapeWall = QString::fromUtf8("e");
-
 static const QString kHorzSwitchWall = QString::fromUtf8(">>");
 static const QString kVertSwitchWall = QString::fromUtf8(">");
-
-static const QString kHorzZapWall = QString::fromUtf8("zz");
-static const QString kVertZapWall = QString::fromUtf8("z");
+static const QString kHorzZapWall    = QString::fromUtf8("zz");
+static const QString kVertZapWall    = QString::fromUtf8("z");
 
 static const QString kCornerNormalLeftRightDown = QString::fromUtf8("╦");
 static const QString kCornerNormalLeftRightUp   = QString::fromUtf8("╩");
@@ -75,6 +77,8 @@ static const QString kCornerNormalUpLeft        = QString::fromUtf8("╝");
 static const QString kCornerNormalUpRight       = QString::fromUtf8("╚");
 static const QString kCornerNormalLeftRight     = QString::fromUtf8("═");
 static const QString kCornerNormalUpDown        = QString::fromUtf8("║");
+
+static const QString kCornerBlock = QString::fromUtf8("░");
 
 
 
@@ -217,19 +221,19 @@ Map Map::load(const std::filesystem::path & path)
 	static const QStringList kTileBlocks = {
 		QString::fromUtf8("██"),
 		QString::fromUtf8("▒▒"),
-		QString::fromUtf8("░░"),
+		kBlockTile,
 		kEmptyTile,
 	};
 	static const QStringList kHorzWallBlocks = {
 		QString::fromUtf8("██"),
 		QString::fromUtf8("▒▒"),
-		QString::fromUtf8("░░"),
+		kBlockHorzWall,
 		QString::fromUtf8("  "),
 	};
 	static const QStringList kVertWallBlocks = {
 		QString::fromUtf8("█"),
 		QString::fromUtf8("▒"),
-		QString::fromUtf8("░"),
+		kBlockVertWall,
 		QString::fromUtf8(" "),
 	};
 \
@@ -648,6 +652,121 @@ void Map::draw(const Map & map)
 			const QStringView c = makeCorner(Pos{x, y});
 			if (!c.empty()) {
 				*s = c[0];
+			}
+		}
+	}
+
+	// blocks
+	{
+		const auto hasSomething = [&map] (const Pos & pos) -> bool {
+			if (map.state.killer.pos == pos) return true;
+			for (const Dude & dude : map.state.dudes) {
+				if (dude.pos == pos) return true;
+			}
+			for (const Mine & mine : map.state.mines) {
+				if (mine.pos == pos) return true;
+			}
+			for (const Trap & trap : map.traps) {
+				if (trap.pos == pos) return true;
+			}
+			for (const Phone & phone : map.phones) {
+				if (phone.pos == pos) return true;
+			}
+			for (const Gum & gum : map.gums) {
+				if (gum.pos == pos) return true;
+			}
+			for (const Teleport & teleport : map.teleports) {
+				if (teleport.pos == pos) return true;
+			}
+			if (map.portal.pos == pos) return true;
+			return false;
+		};
+
+		struct Tile {
+			bool checked = false;
+		};
+		std::vector<Tile> checkedTiles(map.width * map.height);
+		const auto checkedTile = [&checkedTiles, &map] (const Pos & pos) -> bool & {
+			return checkedTiles[pos.y * map.width + pos.x].checked;
+		};
+
+		const auto makeArea = [&checkedTile, &map, &hasSomething, &setTile,
+				&setHorzWall, &setVertWall, &corner] (const Pos & startPos) {
+			bool & checked = checkedTile(startPos);
+			if (checked) return;
+			checked = true;
+
+			std::vector<Tile> area(map.width * map.height);
+			const auto areaTile = [&area, &map] (const Pos & pos) -> bool & {
+				return area[pos.y * map.width + pos.x].checked;
+			};
+
+			std::queue<Pos> queue;
+			queue.push(startPos);
+
+			bool blocked = true;
+			int count = 0;
+
+			while (!queue.empty()) {
+				const Pos p = queue.front();
+				queue.pop();
+
+printf("p: %d %d\n", p.x, p.y);
+fflush(stdout);
+
+				assert(!areaTile(p));
+				areaTile(p) = true;
+				count++;
+
+				for (const Dir & dir : kAllDirs) {
+					const Pos dirPos = p + shiftForDir(dir);
+					if (map.contains(dirPos)) {
+						bool & a = checkedTile(dirPos);
+						if (!a) {
+							if (!map.hasTallWall(p, dir)) {
+								if (hasSomething(dirPos)) {
+									blocked = false;
+								}
+								a = true;
+								queue.push(dirPos);
+							}
+						}
+					}
+				}
+			}
+
+			printf("area: count = %d blocked = %d\n", count, blocked);
+			fflush(stdout);
+
+			if (blocked) {
+				for (int y = 0; y < map.height; ++y) {
+					for (int x = 0; x < map.width; ++x) {
+						const Pos pos = Pos{x, y};
+						if (areaTile(pos)) {
+							setTile(pos, kBlockTile);
+							const Pos rightPos = pos + shiftForDir(Dir::Right);
+							const Pos downPos = pos + shiftForDir(Dir::Down);
+							const Pos downRightPos = downPos + shiftForDir(Dir::Right);
+							const bool hasRight = map.contains(rightPos) && areaTile(rightPos);
+							const bool hasDown = map.contains(downPos) && areaTile(downPos);
+							if (hasRight) {
+								setVertWall(rightPos, kBlockVertWall);
+							}
+							if (hasDown) {
+								setHorzWall(downPos, kBlockHorzWall);
+							}
+							if (hasRight && hasDown) {
+								*corner(downRightPos) = kCornerBlock[0];
+							}
+						}
+					}
+				}
+			}
+		};
+
+		for (int y = 0; y < map.height; ++y) {
+			for (int x = 0; x < map.width; ++x) {
+				makeArea(Pos{x, y});
 			}
 		}
 	}
