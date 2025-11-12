@@ -34,6 +34,13 @@ static const QString kGum          = QString::fromUtf8("gg");
 static const QString kCop          = QString::fromUtf8("C");
 static const QString kSwat         = QString::fromUtf8("S");
 static const QString kDrop         = QString::fromUtf8("D");
+static const QString kPhone        = QString::fromUtf8("P");
+static const QString kTeleport     = QString::fromUtf8("T");
+
+static const QStringList kTraps = {
+	QString::fromUtf8("xx"),
+	QString::fromUtf8("TT"),
+};
 
 static const QString kBlockHorzWall = QString::fromUtf8("░░");
 static const QString kBlockVertWall = QString::fromUtf8("░");
@@ -66,6 +73,8 @@ static const QString kVertSwitchWall = QString::fromUtf8(">");
 static const QString kHorzZapWall    = QString::fromUtf8("zz");
 static const QString kVertZapWall    = QString::fromUtf8("z");
 
+static const QString kCornerNormalLeftRight     = QString::fromUtf8("═");
+static const QString kCornerNormalUpDown        = QString::fromUtf8("║");
 static const QString kCornerNormalLeftRightDown = QString::fromUtf8("╦");
 static const QString kCornerNormalLeftRightUp   = QString::fromUtf8("╩");
 static const QString kCornerNormalUpDownLeft    = QString::fromUtf8("╣");
@@ -75,8 +84,38 @@ static const QString kCornerNormalDownLeft      = QString::fromUtf8("╗");
 static const QString kCornerNormalDownRight     = QString::fromUtf8("╔");
 static const QString kCornerNormalUpLeft        = QString::fromUtf8("╝");
 static const QString kCornerNormalUpRight       = QString::fromUtf8("╚");
-static const QString kCornerNormalLeftRight     = QString::fromUtf8("═");
-static const QString kCornerNormalUpDown        = QString::fromUtf8("║");
+
+static const QString kCornerShortLeftRight     = QString::fromUtf8("─");
+static const QString kCornerShortUpDown        = QString::fromUtf8("│");
+static const QString kCornerShortLeftRightDown = QString::fromUtf8("┬");
+static const QString kCornerShortLeftRightUp   = QString::fromUtf8("┴");
+static const QString kCornerShortUpDownLeft    = QString::fromUtf8("┤");
+static const QString kCornerShortUpDownRight   = QString::fromUtf8("├");
+static const QString kCornerShortCross         = QString::fromUtf8("┼");
+static const QString kCornerShortDownLeft      = QString::fromUtf8("┐");
+static const QString kCornerShortDownRight     = QString::fromUtf8("┌");
+static const QString kCornerShortUpLeft        = QString::fromUtf8("┘");
+static const QString kCornerShortUpRight       = QString::fromUtf8("└");
+
+static const QString kCornerNormalLeftRightShortDown = QString::fromUtf8("╤");
+static const QString kCornerNormalLeftRightShortUp   = QString::fromUtf8("╧");
+static const QString kCornerNormalUpDownShortLeft    = QString::fromUtf8("╢");
+static const QString kCornerNormalUpDownShortRight   = QString::fromUtf8("╟");
+static const QString kCornerNormalUpDownShortCross   = QString::fromUtf8("╫");
+static const QString kCornerNormalDownShortLeft      = QString::fromUtf8("╖");
+static const QString kCornerNormalDownShortRight     = QString::fromUtf8("╓");
+static const QString kCornerNormalUpShortLeft        = QString::fromUtf8("╜");
+static const QString kCornerNormalUpShortRight       = QString::fromUtf8("╙");
+
+static const QString kCornerShortLeftRightNormalDown = QString::fromUtf8("╥");
+static const QString kCornerShortLeftRightNormalUp   = QString::fromUtf8("╨");
+static const QString kCornerShortUpDownNormalLeft    = QString::fromUtf8("╡");
+static const QString kCornerShortUpDownNormalRight   = QString::fromUtf8("╞");
+static const QString kCornerShortUpDownNormalCross   = QString::fromUtf8("╪");
+static const QString kCornerShortDownNormalLeft      = QString::fromUtf8("╕");
+static const QString kCornerShortDownNormalRight     = QString::fromUtf8("╒");
+static const QString kCornerShortUpNormalLeft        = QString::fromUtf8("╛");
+static const QString kCornerShortUpNormalRight       = QString::fromUtf8("╘");
 
 static const QString kCornerBlock = QString::fromUtf8("░");
 
@@ -213,11 +252,6 @@ Map Map::load(const std::filesystem::path & path)
 	std::vector<Gum> gums;
 	std::vector<Teleport> teleports;
 
-	static const QStringList kTraps = {
-		QString::fromUtf8("TT"),
-		QString::fromUtf8("xx"),
-	};
-
 	static const QStringList kTileBlocks = {
 		QString::fromUtf8("██"),
 		QString::fromUtf8("▒▒"),
@@ -306,12 +340,12 @@ Map Map::load(const std::filesystem::path & path)
 					.pos = Pos{x, y},
 					.orientation = orientationFromString(tile.at(1)),
 				});
-			} else if (tile.at(0) == 'P') {
+			} else if (tile.at(0) == kPhone) {
 				phones.push_back(Phone {
 					.pos = Pos{x, y},
 					.color = colorFromString(tile.at(1)),
 				});
-			} else if (tile.at(0) == 'T') {
+			} else if (tile.at(0) == kTeleport) {
 				teleports.push_back(Teleport {
 					.pos = Pos{x, y},
 					.color = colorFromString(tile.at(1)),
@@ -503,6 +537,7 @@ void Map::draw(const Map & map)
 		}
 	}
 
+	// tiles
 	setTile(map.state.killer.pos, [&map] {
 		if (map.portal.pos == map.state.killer.pos) {
 			return kKillerPortal;
@@ -513,8 +548,10 @@ void Map::draw(const Map & map)
 		return kKiller;
 	}());
 
-	if (map.portal.pos != map.state.killer.pos) {
-		setTile(map.portal.pos, kPortal);
+	if (map.portal.pos != Pos::null()) {
+		if (map.portal.pos != map.state.killer.pos) {
+			setTile(map.portal.pos, kPortal);
+		}
 	}
 
 	QString tmpTile;
@@ -552,6 +589,33 @@ void Map::draw(const Map & map)
 				setTile(mine.pos, kMine);
 			});
 
+	std::for_each(map.traps.begin(), map.traps.end(),
+			[&setTile] (const Trap & trap) {
+				setTile(trap.pos, kTraps[0]);
+			});
+
+	std::for_each(map.phones.begin(), map.phones.end(),
+			[&setTile, &tmpTile] (const Phone & phone) {
+				tmpTile[0] = kPhone[0];
+				tmpTile[1] = colorToString(phone.color);
+				setTile(phone.pos, tmpTile);
+			});
+
+	std::for_each(map.gums.begin(), map.gums.end(),
+			[&setTile, &map] (const Gum & gum) {
+				if (gum.pos == map.state.killer.pos) return;
+				if (map.state.findDude(gum.pos) != map.state.dudes.end()) return;
+				setTile(gum.pos, kGum);
+			});
+
+	std::for_each(map.teleports.begin(), map.teleports.end(),
+			[&setTile, &tmpTile] (const Teleport & teleport) {
+				tmpTile[0] = kTeleport[0];
+				tmpTile[1] = colorToString(teleport.color);
+				setTile(teleport.pos, tmpTile);
+			});
+
+	// walls
 	std::for_each(map.hwalls.begin(), map.hwalls.end(),
 			[&setHorzWall] (const Wall & wall) {
 				setHorzWall(wall.pos, [&wall] {
@@ -596,9 +660,11 @@ void Map::draw(const Map & map)
 				}());
 			});
 
+	// corners
 	const auto cornerForTag = [] () -> std::map<std::string_view, QStringView> {
 		std::map<std::string_view, QStringView> m;
-		// lrud
+
+		// lrud all normal
 		m["nn  "] = kCornerNormalLeftRight;
 		m["  nn"] = kCornerNormalUpDown;
 		m["n n "] = kCornerNormalUpLeft;
@@ -610,6 +676,80 @@ void Map::draw(const Map & map)
 		m["n nn"] = kCornerNormalUpDownLeft;
 		m[" nnn"] = kCornerNormalUpDownRight;
 		m["nnnn"] = kCornerNormalCross;
+
+		// lrud all short
+		m["ss  "] = kCornerShortLeftRight;
+		m["  ss"] = kCornerShortUpDown;
+		m["s s "] = kCornerShortUpLeft;
+		m["s  s"] = kCornerShortDownLeft;
+		m[" ss "] = kCornerShortUpRight;
+		m[" s s"] = kCornerShortDownRight;
+		m["sss "] = kCornerShortLeftRightUp;
+		m["ss s"] = kCornerShortLeftRightDown;
+		m["s ss"] = kCornerShortUpDownLeft;
+		m[" sss"] = kCornerShortUpDownRight;
+		m["ssss"] = kCornerShortCross;
+
+		// lrud 1 normal and 1 short straight
+		m["ns  "] = kCornerShortLeftRight;
+		m["  ns"] = kCornerShortUpDown;
+		m["sn  "] = kCornerShortLeftRight;
+		m["  sn"] = kCornerShortUpDown;
+
+		// lrud 1 normal and 1 short corner
+		m["n s "] = kCornerShortUpNormalLeft;
+		m["n  s"] = kCornerShortDownNormalLeft;
+		m[" ns "] = kCornerShortUpNormalRight;
+		m[" n s"] = kCornerShortDownNormalRight;
+		m["s n "] = kCornerNormalUpShortLeft;
+		m["s  n"] = kCornerNormalDownShortLeft;
+		m[" sn "] = kCornerNormalUpShortRight;
+		m[" s n"] = kCornerNormalDownShortRight;
+
+		// lrud normal and short straight crosses
+		m["nnss"] = kCornerShortUpDownNormalCross;
+		m["ssnn"] = kCornerNormalUpDownShortCross;
+
+		// lrud normal and short 3-1 crosses
+		m["nsss"] = kCornerShortCross;
+		m["snss"] = kCornerShortCross;
+		m["ssns"] = kCornerShortCross;
+		m["sssn"] = kCornerShortCross;
+		m["snnn"] = kCornerNormalCross;
+		m["nsnn"] = kCornerNormalCross;
+		m["nnsn"] = kCornerNormalCross;
+		m["nnns"] = kCornerNormalCross;
+
+		// lrud 3 way straight crosses
+		m["ssn "] = kCornerShortLeftRightNormalUp;
+		m["ss n"] = kCornerShortLeftRightNormalDown;
+		m["n ss"] = kCornerShortUpDownNormalLeft;
+		m[" nss"] = kCornerShortUpDownNormalRight;
+		m["nns "] = kCornerNormalLeftRightShortUp;
+		m["nn s"] = kCornerNormalLeftRightShortDown;
+		m["s nn"] = kCornerNormalUpDownShortLeft;
+		m[" snn"] = kCornerNormalUpDownShortRight;
+
+		// lrud 3 way corner 2 normal
+		m["nsn "] = kCornerNormalLeftRightUp;
+		m["n ns"] = kCornerNormalUpDownLeft;
+		m["ns n"] = kCornerNormalLeftRightDown;
+		m["n sn"] = kCornerNormalUpDownLeft;
+		m["snn "] = kCornerNormalLeftRightUp;
+		m[" nns"] = kCornerNormalUpDownRight;
+		m["sn n"] = kCornerNormalLeftRightDown;
+		m[" nsn"] = kCornerNormalUpDownRight;
+
+		// lrud 3 way corner 2 short
+		m["sns "] = kCornerShortLeftRightUp;
+		m["s sn"] = kCornerShortUpDownLeft;
+		m["sn s"] = kCornerShortLeftRightDown;
+		m["s ns"] = kCornerShortUpDownLeft;
+		m["nss "] = kCornerShortLeftRightUp;
+		m[" ssn"] = kCornerShortUpDownRight;
+		m["ns s"] = kCornerShortLeftRightDown;
+		m[" sns"] = kCornerShortUpDownRight;
+
 		return m;
 	}();
 
@@ -618,28 +758,26 @@ void Map::draw(const Map & map)
 		const Wall * const dwall = map.findWall(pos, Dir::Left);
 		const Wall * const lwall = map.findWall(pos + Pos{-1, -1}, Dir::Down);
 		const Wall * const uwall = map.findWall(pos + Pos{-1, -1}, Dir::Right);
-		char tag[4] = {' ', ' ', ' ', ' '};
-		if (lwall) {
-			if (lwall->type == Wall::Type::Normal) {
-				tag[int(Dir::Left)] = 'n';
+
+		char cornerTag[4] = {' ', ' ', ' ', ' '};
+
+		const auto tag = [&cornerTag] (const Wall * const wall, const Dir dir) {
+			if (wall) {
+				if (wall->type == Wall::Type::Normal) {
+					cornerTag[int(dir)] = 'n';
+				} else if (wall->type == Wall::Type::Short) {
+					cornerTag[int(dir)] = 's';
+				}
 			}
-		}
-		if (rwall) {
-			if (rwall->type == Wall::Type::Normal) {
-				tag[int(Dir::Right)] = 'n';
-			}
-		}
-		if (uwall) {
-			if (uwall->type == Wall::Type::Normal) {
-				tag[int(Dir::Up)] = 'n';
-			}
-		}
-		if (dwall) {
-			if (dwall->type == Wall::Type::Normal) {
-				tag[int(Dir::Down)] = 'n';
-			}
-		}
-		const auto it = cornerForTag.find(std::string_view(tag, std::extent_v<decltype(tag)>));
+		};
+
+		tag(lwall, Dir::Left);
+		tag(rwall, Dir::Right);
+		tag(uwall, Dir::Up);
+		tag(dwall, Dir::Down);
+
+		const auto it = cornerForTag.find(std::string_view(cornerTag,
+				std::extent_v<decltype(cornerTag)>));
 		if (it != cornerForTag.end()) {
 			return it->second;
 		}
@@ -711,9 +849,6 @@ void Map::draw(const Map & map)
 				const Pos p = queue.front();
 				queue.pop();
 
-printf("p: %d %d\n", p.x, p.y);
-fflush(stdout);
-
 				assert(!areaTile(p));
 				areaTile(p) = true;
 				count++;
@@ -734,9 +869,6 @@ fflush(stdout);
 					}
 				}
 			}
-
-			printf("area: count = %d blocked = %d\n", count, blocked);
-			fflush(stdout);
 
 			if (blocked) {
 				for (int y = 0; y < map.height; ++y) {
