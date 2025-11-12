@@ -16,6 +16,12 @@ static constexpr int kMaxMapSize = 16;
 
 Map App::load(const std::filesystem::path & path)
 {
+	static constexpr std::string_view kNamePrefix = "name: ";
+
+	printf("Loading: %s\n", path.filename().c_str());
+	fflush(stdout);
+
+	std::string name;
 	int maxLength = 0;
 	std::vector<QString> lines;
 	std::ifstream file(path);
@@ -23,6 +29,13 @@ Map App::load(const std::filesystem::path & path)
 	std::string line;
 	while (std::getline(file, line)) {
 		if (line.empty() || std::string_view(line).substr(0, 1) == "#") {
+			continue;
+		}
+		if (line.starts_with(kNamePrefix)) {
+			assert(name.empty());
+			name = line.substr(kNamePrefix.size());
+			printf("Level name: %s\n", name.c_str());
+			fflush(stdout);
 			continue;
 		}
 		const QString qline = QString::fromStdString(line);
@@ -58,23 +71,23 @@ Map App::load(const std::filesystem::path & path)
 	std::vector<Teleport> teleports;
 
 	const auto getDir = [] (const QChar & s) -> Dir {
-		if (s == "l") return Dir::Left;
-		if (s == "r") return Dir::Right;
-		if (s == "u") return Dir::Up;
-		if (s == "d") return Dir::Down;
+		if (s == 'l') return Dir::Left;
+		if (s == 'r') return Dir::Right;
+		if (s == 'u') return Dir::Up;
+		if (s == 'd') return Dir::Down;
 		assert(false);
 	};
 
 	const auto getOrientation = [] (const QChar & s) -> Orientation {
-		if (s == "h") return Orientation::Horz;
-		if (s == "v") return Orientation::Vert;
+		if (s == 'h') return Orientation::Horz;
+		if (s == 'v') return Orientation::Vert;
 		assert(false);
 	};
 
 	const auto getColor = [] (const QChar & s) -> Color {
-		if (s == "b") return Color::Blue;
-		if (s == "r") return Color::Red;
-		if (s == "y") return Color::Yellow;
+		if (s == 'b') return Color::Blue;
+		if (s == 'r') return Color::Red;
+		if (s == 'y') return Color::Yellow;
 		assert(false);
 	};
 
@@ -86,7 +99,6 @@ Map App::load(const std::filesystem::path & path)
 		QString::fromUtf8("TT"),
 		QString::fromUtf8("xx"),
 	};
-	static const QString kVV = QString::fromUtf8("VV");
 	static const QString kCat = QString::fromUtf8("^^");
 	static const QString kMine = QString::fromUtf8("<>");
 	static const QString kGum = QString::fromUtf8("gg");
@@ -163,13 +175,21 @@ Map App::load(const std::filesystem::path & path)
 				gums.push_back(Gum {
 					.pos = Pos{x, y},
 				});
-			} else if (kTraps.contains(tile)) {
-				traps.push_back(Trap{Pos{x, y}});
-			} else if (tile == kVV) {
+			} else if (tile.at(0) == 'V') {
 				dudes.push_back(Dude {
 					.type = Dude::Type::Victim,
 					.pos = Pos{x, y},
 				});
+				if (tile.at(1) == 'V') {
+				} else if (tile.at(1) == 'g') {
+					gums.push_back(Gum {
+						.pos = Pos{x, y},
+					});
+				} else {
+					assert(false);
+				}
+			} else if (kTraps.contains(tile)) {
+				traps.push_back(Trap{Pos{x, y}});
 			} else if (tile == kCat) {
 				dudes.push_back(Dude {
 					.type = Dude::Type::Cat,
@@ -195,18 +215,18 @@ Map App::load(const std::filesystem::path & path)
 					.pos = Pos{x, y},
 					.dir = getDir(tile.at(1)),
 				});
-			} else if (tile.at(0) == "D") {
+			} else if (tile.at(0) == 'D') {
 				dudes.push_back(Dude {
 					.type = Dude::Type::Drop,
 					.pos = Pos{x, y},
 					.orientation = getOrientation(tile.at(1)),
 				});
-			} else if (tile.at(0) == "P") {
+			} else if (tile.at(0) == 'P') {
 				phones.push_back(Phone {
 					.pos = Pos{x, y},
 					.color = getColor(tile.at(1)),
 				});
-			} else if (tile.at(0) == "T") {
+			} else if (tile.at(0) == 'T') {
 				teleports.push_back(Teleport {
 					.pos = Pos{x, y},
 					.color = getColor(tile.at(1)),
