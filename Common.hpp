@@ -349,27 +349,41 @@ struct State {
 };
 
 
+struct Hash {
+	std::size_t sum = 0;
+	int index = 0;
+
+	template <typename T>
+	void operator()(const T & v) noexcept
+	{
+		sum ^= (std::hash<T>{}(v) << index);
+		index++;
+		if (index == sizeof(sum)) index = 0;
+	};
+};
+
+
 template<>
 struct std::hash<State> {
 	std::size_t operator()(const State & state) const noexcept
 	{
-		std::size_t hash = 0;
-		hash ^= std::hash<Pos>{}(state.killer.pos);
+		Hash hash;
+		hash(state.killer.pos);
 		for (const Dude & dude : state.dudes) {
-			hash ^= std::hash<Dude::Type>{}(dude.type);
-			hash ^= std::hash<Pos>{}(dude.pos);
+			hash(dude.type);
+			hash(dude.pos);
 			if (dude.type == Dude::Type::Cop || dude.type == Dude::Type::Swat) {
-				hash ^= std::hash<Dir>{}(dude.dir);
+				hash(dude.dir);
 			}
 			if (dude.type == Dude::Type::Drop) {
-				hash ^= std::hash<Orientation>{}(dude.orientation);
+				hash(dude.orientation);
 			}
 		}
 		for (const Mine & mine : state.mines) {
-			hash ^= std::hash<Pos>{}(mine.pos);
+			hash(mine.pos);
 		}
-		hash ^= std::hash<bool>{}(state.light);
-		return hash;
+		hash(state.light);
+		return hash.sum;
 	}
 };
 
