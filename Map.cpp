@@ -187,13 +187,15 @@ static QChar colorToString(const Color & color) noexcept
 
 Map Map::load(const std::filesystem::path & path)
 {
-	static constexpr std::string_view kNamePrefix = "name: ";
+	static constexpr std::string_view kShortNamePrefix = "name: ";
+	static constexpr std::string_view kFullNamePrefix = "full: ";
 	static constexpr std::string_view kTurnsPrefix = "turns: ";
 
 	printf("Loading: %s\n", path.filename().c_str());
 	fflush(stdout);
 
-	std::string name;
+	std::string shortName;
+	std::string fullName;
 	int turns = -1;
 
 	int maxLength = 0;
@@ -205,10 +207,17 @@ Map Map::load(const std::filesystem::path & path)
 		if (line.empty() || std::string_view(line).substr(0, 1) == "#") {
 			continue;
 		}
-		if (line.starts_with(kNamePrefix)) {
-			assert(name.empty());
-			name = line.substr(kNamePrefix.size());
-			printf("Level name: %s\n", name.c_str());
+		if (line.starts_with(kShortNamePrefix)) {
+			assert(shortName.empty());
+			shortName = line.substr(kShortNamePrefix.size());
+			printf("short name: %s\n", shortName.c_str());
+			fflush(stdout);
+			continue;
+		}
+		if (line.starts_with(kFullNamePrefix)) {
+			assert(fullName.empty());
+			fullName = line.substr(kFullNamePrefix.size());
+			printf("full name: %s\n", fullName.c_str());
 			fflush(stdout);
 			continue;
 		}
@@ -464,6 +473,9 @@ Map Map::load(const std::filesystem::path & path)
 	std::sort(mines.begin(), mines.end());
 
 	return Map {
+		.shortName = std::move(shortName),
+		.fullName = std::move(fullName),
+		.turns = turns,
 		.width = width,
 		.height = height,
 		.hwalls = std::move(hwalls),
@@ -876,18 +888,20 @@ void Map::draw(const Map & map)
 						const Pos pos = Pos{x, y};
 						if (areaTile(pos)) {
 							setTile(pos, kBlockTile);
-							const Pos rightPos = pos + shiftForDir(Dir::Right);
 							const Pos downPos = pos + shiftForDir(Dir::Down);
+							const Pos rightPos = pos + shiftForDir(Dir::Right);
 							const Pos downRightPos = downPos + shiftForDir(Dir::Right);
 							const bool hasRight = map.contains(rightPos) && areaTile(rightPos);
 							const bool hasDown = map.contains(downPos) && areaTile(downPos);
+							const bool hasDownRight = map.contains(downRightPos) &&
+									areaTile(downRightPos) && hasDown && hasRight;
 							if (hasRight) {
 								setVertWall(rightPos, kBlockVertWall);
 							}
 							if (hasDown) {
 								setHorzWall(downPos, kBlockHorzWall);
 							}
-							if (hasRight && hasDown) {
+							if (hasDownRight) {
 								*corner(downRightPos) = kCornerBlock[0];
 							}
 						}

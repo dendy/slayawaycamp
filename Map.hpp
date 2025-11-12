@@ -12,7 +12,12 @@ struct Map {
 	static Map load(const std::filesystem::path & path);
 	static void draw(const Map & map);
 
+	std::string shortName;
+	std::string fullName;
+	int turns = -1;
+
 	int width, height;
+
 	std::vector<Wall> hwalls;
 	std::vector<Wall> vwalls;
 	std::vector<Trap> traps;
