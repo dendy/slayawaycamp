@@ -26,73 +26,6 @@ const Teleport & App::getOtherTeleport(const Teleport & teleport) const noexcept
 }
 
 
-const Wall * App::findWall(const Pos & pos, const Dir dir) const noexcept
-{
-	const Pos shift = shiftForDir(dir);
-	const std::vector<Wall> & walls = shift.x != 0 ? map.vwalls : map.hwalls;
-	const int shiftDist = shift.x != 0 ? shift.x : shift.y;
-	const int wallShift = shiftDist == -1 ? 0 : 1;
-
-	const auto wallPos = [&shift, &pos, wallShift] () -> Pos {
-		if (shift.x != 0) {
-			return Pos {
-				.x = pos.x + wallShift,
-				.y = pos.y,
-			};
-		} else {
-			return Pos {
-				.x = pos.x,
-				.y = pos.y + wallShift,
-			};
-		}
-	}();
-
-	const auto it = std::find_if(walls.begin(), walls.end(), [&wallPos] (const Wall & wall) {
-		return wall.pos == wallPos;
-	});
-	if (it == walls.end()) {
-		return nullptr;
-	} else {
-		return &*it;
-	}
-}
-
-
-const Wall & App::getWall(const Pos & pos, const Dir dir) const noexcept
-{
-	const Wall * const pwall = findWall(pos, dir);
-	assert(pwall);
-	return *pwall;
-}
-
-
-bool App::hasAnyWall(const Pos & pos, const Dir dir) const noexcept
-{
-	const Wall * const pwall = findWall(pos, dir);
-	return pwall != nullptr;
-}
-
-
-bool App::hasTallWall(const Pos & pos, const Dir dir) const noexcept
-{
-	const Wall * const pwall = findWall(pos, dir);
-	if (!pwall) {
-		return false;
-	} else {
-		switch (pwall->type) {
-		case Wall::Type::Normal:
-		case Wall::Type::Switch:
-			return true;
-		case Wall::Type::Escape:
-		case Wall::Type::Short:
-		case Wall::Type::Zap:
-			return false;
-		}
-		assert(false);
-	}
-}
-
-
 void App::trySwitchLight(State & state, const Wall & wall, const Dir dir, Extra & extra) noexcept
 {
 	if (wall.type == Wall::Type::Switch) {
@@ -136,8 +69,8 @@ App::Res App::go(State & state, const Pos & fromPos, const Dir dir, const bool p
 			};
 		};
 
-		if (hasAnyWall(pos, dir)) {
-			const Wall & wall = getWall(pos, dir);
+		if (map.hasAnyWall(pos, dir)) {
+			const Wall & wall = map.getWall(pos, dir);
 			if (state.light && wall.type == Wall::Type::Zap) {
 				// bumped into electric wire wall
 				return makeRes(Bump::Death);
@@ -227,7 +160,7 @@ bool App::aimedByCop(const State & state, const Dude & cop) const noexcept
 		// cops cannot aim when lights are off
 		return false;
 	}
-	if (hasAnyWall(cop.pos, cop.dir)) {
+	if (map.hasAnyWall(cop.pos, cop.dir)) {
 		// cannot aim through any wall
 		return false;
 	}
@@ -253,7 +186,7 @@ bool App::aimedBySwat(const State & state, const Dude & swat) const noexcept
 	Pos pos = swat.pos;
 
 	while (true) {
-		if (hasTallWall(pos, swat.dir)) {
+		if (map.hasTallWall(pos, swat.dir)) {
 			break;
 		}
 
@@ -298,7 +231,7 @@ bool App::aimedByAnySwat(const State & state) const noexcept
 void App::scare(const State & state, const Pos & pos, Extra & extra) const
 {
 	for (const Dir dir : kAllDirs) {
-		if (hasTallWall(pos, dir)) {
+		if (map.hasTallWall(pos, dir)) {
 			continue;
 		}
 
@@ -339,7 +272,7 @@ void App::call(const State & state, const Dude & who, const Phone & phone, Extra
 			Pos pos = otherPhone.pos;
 
 			while (true) {
-				if (hasTallWall(pos, dir)) {
+				if (map.hasTallWall(pos, dir)) {
 					break;
 				}
 
@@ -419,7 +352,7 @@ void App::goDude(State & state, const Dude dude, const Dir dir, const bool calle
 			}
 		}
 		if (res.bump == Bump::Wall) {
-			const Wall & wall = getWall(target.pos, dir);
+			const Wall & wall = map.getWall(target.pos, dir);
 			trySwitchLight(state, wall, dir, extra);
 			if (wall.type == Wall::Type::Escape) {
 				if (dude.type == Dude::Type::Victim || dude.type == Dude::Type::Cat) {
@@ -494,7 +427,7 @@ void App::processExtra(State & state, Extra & extra)
 		const Extra::Dropped dropped = extra.dropped.front();
 		extra.dropped.pop();
 
-		if (hasAnyWall(dropped.drop.pos, dropped.dir)) {
+		if (map.hasAnyWall(dropped.drop.pos, dropped.dir)) {
 			// cannot drop onto the wall
 			continue;
 		}
@@ -664,7 +597,7 @@ void App::exec() noexcept
 				break;
 
 			case Bump::Wall: {
-				const Wall & wall = getWall(res.pos, dir);
+				const Wall & wall = map.getWall(res.pos, dir);
 				trySwitchLight(state, wall, dir, extra);
 
 				state.killer.pos = res.pos;

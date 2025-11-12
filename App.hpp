@@ -62,10 +62,6 @@ public:
 	App(const std::filesystem::path & path);
 
 	const Teleport & getOtherTeleport(const Teleport & teleport) const noexcept;
-	const Wall * findWall(const Pos & pos, Dir dir) const noexcept;
-	const Wall & getWall(const Pos & pos, Dir dir) const noexcept;
-	bool hasAnyWall(const Pos & pos, Dir dir) const noexcept;
-	bool hasTallWall(const Pos & pos, Dir dir) const noexcept;
 	void trySwitchLight(State & state, const Wall & wall, Dir dir, Extra & extra) noexcept;
 	Res go(State & state, const Pos & fromPos, Dir dir, bool portal) const noexcept;
 	bool aimedByCop(const State & state, const Dude & cop) const noexcept;

@@ -3,6 +3,7 @@
 
 #include <charconv>
 #include <fstream>
+#include <map>
 
 #include <QStringList>
 
@@ -62,6 +63,18 @@ static const QString kVertSwitchWall = QString::fromUtf8(">");
 
 static const QString kHorzZapWall = QString::fromUtf8("zz");
 static const QString kVertZapWall = QString::fromUtf8("z");
+
+static const QString kCornerNormalLeftRightDown = QString::fromUtf8("╦");
+static const QString kCornerNormalLeftRightUp   = QString::fromUtf8("╩");
+static const QString kCornerNormalUpDownLeft    = QString::fromUtf8("╣");
+static const QString kCornerNormalUpDownRight   = QString::fromUtf8("╠");
+static const QString kCornerNormalCross         = QString::fromUtf8("╬");
+static const QString kCornerNormalDownLeft      = QString::fromUtf8("╗");
+static const QString kCornerNormalDownRight     = QString::fromUtf8("╔");
+static const QString kCornerNormalUpLeft        = QString::fromUtf8("╝");
+static const QString kCornerNormalUpRight       = QString::fromUtf8("╚");
+static const QString kCornerNormalLeftRight     = QString::fromUtf8("═");
+static const QString kCornerNormalUpDown        = QString::fromUtf8("║");
 
 
 
@@ -457,6 +470,12 @@ void Map::draw(const Map & map)
 		return lines[pos.y * 2 + 1].data() + pos.x * 3;
 	};
 
+	const auto corner = [&lines, &map] (const Pos & pos) -> QChar * {
+		assert(pos.x >= 0 && pos.x < map.width + 1);
+		assert(pos.y >= 0 && pos.y < map.height + 1);
+		return lines[pos.y * 2].data() + pos.x * 3;
+	};
+
 	const auto setTile = [&tile] (const Pos & pos, const QStringView & value) {
 		QChar * const s = tile(pos);
 		s[0] = value[0];
@@ -573,9 +592,136 @@ void Map::draw(const Map & map)
 				}());
 			});
 
+	const auto cornerForTag = [] () -> std::map<std::string_view, QStringView> {
+		std::map<std::string_view, QStringView> m;
+		// lrud
+		m["nn  "] = kCornerNormalLeftRight;
+		m["  nn"] = kCornerNormalUpDown;
+		m["n n "] = kCornerNormalUpLeft;
+		m["n  n"] = kCornerNormalDownLeft;
+		m[" nn "] = kCornerNormalUpRight;
+		m[" n n"] = kCornerNormalDownRight;
+		m["nnn "] = kCornerNormalLeftRightUp;
+		m["nn n"] = kCornerNormalLeftRightDown;
+		m["n nn"] = kCornerNormalUpDownLeft;
+		m[" nnn"] = kCornerNormalUpDownRight;
+		m["nnnn"] = kCornerNormalCross;
+		return m;
+	}();
+
+	const auto makeCorner = [&map, &cornerForTag] (const Pos & pos) -> QStringView {
+		const Wall * const rwall = map.findWall(pos, Dir::Up);
+		const Wall * const dwall = map.findWall(pos, Dir::Left);
+		const Wall * const lwall = map.findWall(pos + Pos{-1, -1}, Dir::Down);
+		const Wall * const uwall = map.findWall(pos + Pos{-1, -1}, Dir::Right);
+		char tag[4] = {' ', ' ', ' ', ' '};
+		if (lwall) {
+			if (lwall->type == Wall::Type::Normal) {
+				tag[int(Dir::Left)] = 'n';
+			}
+		}
+		if (rwall) {
+			if (rwall->type == Wall::Type::Normal) {
+				tag[int(Dir::Right)] = 'n';
+			}
+		}
+		if (uwall) {
+			if (uwall->type == Wall::Type::Normal) {
+				tag[int(Dir::Up)] = 'n';
+			}
+		}
+		if (dwall) {
+			if (dwall->type == Wall::Type::Normal) {
+				tag[int(Dir::Down)] = 'n';
+			}
+		}
+		const auto it = cornerForTag.find(std::string_view(tag, std::extent_v<decltype(tag)>));
+		if (it != cornerForTag.end()) {
+			return it->second;
+		}
+		return {};
+	};
+
+	for (int y = 0; y <= map.height; ++y) {
+		for (int x = 0; x <= map.width; ++x) {
+			QChar * const s = corner(Pos{x, y});
+			const QStringView c = makeCorner(Pos{x, y});
+			if (!c.empty()) {
+				*s = c[0];
+			}
+		}
+	}
+
 	// draw to stdout
 	std::for_each(lines.begin(), lines.end(), [&lines] (QString & line) {
 		const QByteArray utf8 = line.toUtf8();
 		printf("%s\n", utf8.data());
 	});
+}
+
+
+const Wall * Map::findWall(const Pos & pos, const Dir dir) const noexcept
+{
+	const Pos shift = shiftForDir(dir);
+	const std::vector<Wall> & walls = shift.x != 0 ? vwalls : hwalls;
+	const int shiftDist = shift.x != 0 ? shift.x : shift.y;
+	const int wallShift = shiftDist == -1 ? 0 : 1;
+
+	const auto wallPos = [&shift, &pos, wallShift] () -> Pos {
+		if (shift.x != 0) {
+			return Pos {
+				.x = pos.x + wallShift,
+				.y = pos.y,
+			};
+		} else {
+			return Pos {
+				.x = pos.x,
+				.y = pos.y + wallShift,
+			};
+		}
+	}();
+
+	const auto it = std::find_if(walls.begin(), walls.end(), [&wallPos] (const Wall & wall) {
+		return wall.pos == wallPos;
+	});
+	if (it == walls.end()) {
+		return nullptr;
+	} else {
+		return &*it;
+	}
+}
+
+
+const Wall & Map::getWall(const Pos & pos, const Dir dir) const noexcept
+{
+	const Wall * const pwall = findWall(pos, dir);
+	assert(pwall);
+	return *pwall;
+}
+
+
+bool Map::hasAnyWall(const Pos & pos, const Dir dir) const noexcept
+{
+	const Wall * const pwall = findWall(pos, dir);
+	return pwall != nullptr;
+}
+
+
+bool Map::hasTallWall(const Pos & pos, const Dir dir) const noexcept
+{
+	const Wall * const pwall = findWall(pos, dir);
+	if (!pwall) {
+		return false;
+	} else {
+		switch (pwall->type) {
+		case Wall::Type::Normal:
+		case Wall::Type::Switch:
+			return true;
+		case Wall::Type::Escape:
+		case Wall::Type::Short:
+		case Wall::Type::Zap:
+			return false;
+		}
+		assert(false);
+	}
 }

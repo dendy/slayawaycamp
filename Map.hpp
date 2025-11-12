@@ -54,4 +54,9 @@ struct Map {
 		assert(it != phones.end());
 		return *it;
 	}
+
+	const Wall * findWall(const Pos & pos, Dir dir) const noexcept;
+	const Wall & getWall(const Pos & pos, Dir dir) const noexcept;
+	bool hasAnyWall(const Pos & pos, Dir dir) const noexcept;
+	bool hasTallWall(const Pos & pos, Dir dir) const noexcept;
 };
