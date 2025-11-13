@@ -1,12 +1,13 @@
 
 #include "Map.hpp"
 
+#include <array>
 #include <charconv>
 #include <fstream>
 #include <map>
 #include <queue>
 
-#include <QStringList>
+#include <QString>
 
 
 
@@ -37,7 +38,7 @@ static const QString kDrop         = QString::fromUtf8("D");
 static const QString kPhone        = QString::fromUtf8("P");
 static const QString kTeleport     = QString::fromUtf8("T");
 
-static const QStringList kTraps = {
+static const std::array<QString, 2> kTraps = {
 	QString::fromUtf8("xx"),
 	QString::fromUtf8("TT"),
 };
@@ -45,21 +46,21 @@ static const QStringList kTraps = {
 static const QString kBlockHorzWall = QString::fromUtf8("░░");
 static const QString kBlockVertWall = QString::fromUtf8("░");
 
-static const QStringList kHorzWalls = {
+static const std::array<QString, 2> kHorzWalls = {
 	QString::fromUtf8("══"),
 	QString::fromUtf8("=="),
 };
 
-static const QStringList kVertWalls = {
+static const std::array<QString, 2> kVertWalls = {
 	QString::fromUtf8("║"),
 	QString::fromUtf8("I"),
 };
 
-static const QStringList kHorzShortWalls = {
+static const std::array<QString, 2> kHorzShortWalls = {
 	QString::fromUtf8("──"),
 	QString::fromUtf8("--"),
 };
-static const QStringList kVertShortWalls = {
+static const std::array<QString, 2> kVertShortWalls = {
 	QString::fromUtf8("│"),
 	QString::fromUtf8("}"),
 };
@@ -120,6 +121,13 @@ static const QString kCornerShortUpNormalRight       = QString::fromUtf8("╘");
 static const QString kCornerBlock = QString::fromUtf8("░");
 
 
+
+
+template <size_t N>
+static bool listContains(const std::array<QString, N> & list, const QStringView & sv) noexcept
+{
+	return std::find(list.begin(), list.end(), sv) != list.end();
+}
 
 
 static Dir dirFromString(const QChar & s) noexcept
@@ -263,19 +271,19 @@ Map Map::load(const std::filesystem::path & path)
 	std::vector<Gum> gums;
 	std::vector<Teleport> teleports;
 
-	static const QStringList kTileBlocks = {
+	static const std::array<QString, 4> kTileBlocks = {
 		QString::fromUtf8("██"),
 		QString::fromUtf8("▒▒"),
 		kBlockTile,
 		kEmptyTile,
 	};
-	static const QStringList kHorzWallBlocks = {
+	static const std::array<QString, 4> kHorzWallBlocks = {
 		QString::fromUtf8("██"),
 		QString::fromUtf8("▒▒"),
 		kBlockHorzWall,
 		QString::fromUtf8("  "),
 	};
-	static const QStringList kVertWallBlocks = {
+	static const std::array<QString, 4> kVertWallBlocks = {
 		QString::fromUtf8("█"),
 		QString::fromUtf8("▒"),
 		kBlockVertWall,
@@ -286,7 +294,7 @@ Map Map::load(const std::filesystem::path & path)
 		const QStringView line = lines[y * 2 + 1];
 		for (int x = 0; x < width; ++x) {
 			const QStringView tile = line.mid(x * 3 + 1, 2);
-			if (kTileBlocks.contains(tile)) {
+			if (listContains(kTileBlocks, tile)) {
 				// empty tile
 			} else if (tile == kKiller) {
 				assert(killer.pos == Pos::null());
@@ -318,7 +326,7 @@ Map Map::load(const std::filesystem::path & path)
 				gums.push_back(Gum {
 					.pos = Pos{x, y},
 				});
-			} else if (kTraps.contains(tile)) {
+			} else if (listContains(kTraps, tile)) {
 				traps.push_back(Trap{Pos{x, y}});
 			} else if (tile == kCat) {
 				dudes.push_back(Dude {
@@ -372,14 +380,14 @@ Map Map::load(const std::filesystem::path & path)
 	for (int y = 0; y < height + 1; ++y) {
 		for (int x = 0; x < width; ++x) {
 			const QStringView wall = QStringView(lines[y * 2]).mid(x * 3 + 1, 2);
-			if (kHorzWallBlocks.contains(wall)) {
+			if (listContains(kHorzWallBlocks, wall)) {
 				// no wall
-			} else if (kHorzWalls.contains(wall)) {
+			} else if (listContains(kHorzWalls, wall)) {
 				hwalls.push_back(Wall {
 					.type = Wall::Type::Normal,
 					.pos = Pos{x, y},
 				});
-			} else if (kHorzShortWalls.contains(wall)) {
+			} else if (listContains(kHorzShortWalls, wall)) {
 				hwalls.push_back(Wall {
 					.type = Wall::Type::Short,
 					.pos = Pos{x, y},
@@ -415,14 +423,14 @@ Map Map::load(const std::filesystem::path & path)
 	for (int x = 0; x < width + 1; ++x) {
 		for (int y = 0; y < height; ++y) {
 			const QStringView wall = QStringView(lines[y * 2 + 1]).mid(x * 3, 1);
-			if (kVertWallBlocks.contains(wall)) {
+			if (listContains(kVertWallBlocks, wall)) {
 				// no wall
-			} else if (kVertWalls.contains(wall)) {
+			} else if (listContains(kVertWalls, wall)) {
 				vwalls.push_back(Wall {
 					.type = Wall::Type::Normal,
 					.pos = Pos{x, y},
 				});
-			} else if (kVertShortWalls.contains(wall)) {
+			} else if (listContains(kVertShortWalls, wall)) {
 				vwalls.push_back(Wall {
 					.type = Wall::Type::Short,
 					.pos = Pos{x, y},

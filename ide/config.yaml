@@ -13,6 +13,8 @@ macros:
   SLAYAWAYCAMP_REFERENCE_DIR: '""'
 
 includes:
+  - ~/opt/qt-5.15.9-release/include
+  - ~/opt/qt-5.15.9-release/include/QtCore
 
 files:
   - .
