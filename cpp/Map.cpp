@@ -12,6 +12,11 @@
 
 
 
+// #define SLAYAWAYCAMP_V1
+
+
+
+
 static constexpr int kMaxMapSize = 16;
 
 
@@ -46,23 +51,40 @@ static const std::array<QString, 2> kTraps = {
 static const QString kBlockHorzWall = QString::fromUtf8("░░");
 static const QString kBlockVertWall = QString::fromUtf8("░");
 
+static const QString kHorzDefaultWall = QString::fromUtf8("══");
+static const QString kVertDefaultWall = QString::fromUtf8("║");
+
 static const std::array<QString, 2> kHorzWalls = {
-	QString::fromUtf8("══"),
+#ifdef SLAYAWAYCAMP_V1
+	QString::fromUtf8("──"),
+	QString::fromUtf8("--"),
+#else
+	kHorzDefaultWall,
 	QString::fromUtf8("=="),
+#endif
 };
 
 static const std::array<QString, 2> kVertWalls = {
-	QString::fromUtf8("║"),
+#ifdef SLAYAWAYCAMP_V1
+	QString::fromUtf8("│"),
+	QString::fromUtf8("|"),
+#else
+	kVertDefaultWall,
 	QString::fromUtf8("I"),
+#endif
 };
 
 static const std::array<QString, 2> kHorzShortWalls = {
+#ifndef SLAYAWAYCAMP_V1
 	QString::fromUtf8("──"),
 	QString::fromUtf8("--"),
+#endif
 };
 static const std::array<QString, 2> kVertShortWalls = {
+#ifndef SLAYAWAYCAMP_V1
 	QString::fromUtf8("│"),
-	QString::fromUtf8("}"),
+	QString::fromUtf8("|"),
+#endif
 };
 
 static const QString kHorzWinWall    = QString::fromUtf8("!!");
@@ -646,7 +668,7 @@ void Map::draw(const Map & map)
 					}
 					switch (wall.type) {
 					case Wall::Type::Normal:
-						return kHorzWalls[0];
+						return kHorzDefaultWall;
 					case Wall::Type::Escape:
 						return kHorzEscapeWall;
 					case Wall::Type::Switch:
@@ -668,7 +690,7 @@ void Map::draw(const Map & map)
 					}
 					switch (wall.type) {
 					case Wall::Type::Normal:
-						return kVertWalls[0];
+						return kVertDefaultWall;
 					case Wall::Type::Escape:
 						return kVertEscapeWall;
 					case Wall::Type::Switch:
