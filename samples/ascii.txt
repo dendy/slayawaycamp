@@ -35,3 +35,13 @@ Shading
     ASCII code 220 = ▄ ( Bottom half block )
     ASCII code 223 = ▀ ( Top half block )
     ASCII code 254 = ■ ( black square )
+
+#  ──    │
+#  ┐  └     ┘    ┌
+#    ┴  ┬  ├   ┼   ┤
+
+#  ══    ║
+#  ╗  ╚     ╝    ╔
+#    ╩  ╦  ╠   ╬   ╣
+
+#  █  ▒  ░
