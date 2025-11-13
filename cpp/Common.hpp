@@ -155,7 +155,43 @@ inline bool dirMatchesOrientation(const Dir dir, const Orientation orientation)
 
 
 
-inline static constexpr std::initializer_list<Dir> kAllDirs = {Dir::Left, Dir::Right, Dir::Up, Dir::Down};
-inline static constexpr std::initializer_list<Color> kAllColors = {Color::Blue, Color::Red, Color::Yellow};
+enum class Category {
+	Base, NC17, Xtra
+};
+
+
+inline std::string_view nameForCategory(const Category & category) noexcept
+{
+	switch (category) {
+	case Category::Base: return "base";
+	case Category::NC17: return "nc17";
+	case Category::Xtra: return "xtra";
+	}
+	assert(false);
+}
+
+
+
+
+inline std::string stepsToString(const std::vector<Dir> & steps) noexcept
+{
+	std::string s;
+	for (const Dir dir: steps) {
+		s += shortNameForDir(dir);
+	}
+	return s;
+}
+
+
+
+
+inline static constexpr std::initializer_list<Dir> kAllDirs =
+		{Dir::Left, Dir::Right, Dir::Up, Dir::Down};
+inline static constexpr std::initializer_list<Color> kAllColors =
+		{Color::Blue, Color::Red, Color::Yellow};
+inline static constexpr std::initializer_list<Category> kAllCategories =
+		{Category::Base, Category::NC17, Category::Xtra};
 
 inline static constexpr int kMaxTeleportCount = kAllColors.size() * 4;
+
+inline static constexpr std::string_view kSerieExtension = ".camp";

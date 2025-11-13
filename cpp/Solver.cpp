@@ -1,7 +1,7 @@
 
 #include "Solver.hpp"
 
-#include "Debug.hpp"
+#include "Debug.hpp" // IWYU pragma: keep
 #include "Player.hpp"
 
 

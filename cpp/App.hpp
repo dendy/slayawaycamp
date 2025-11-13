@@ -19,9 +19,10 @@ public:
 
 	App(Args && args);
 
-	void exec() noexcept;
-
 private:
+	void _execMap() noexcept;
+	void _execMoobaa() noexcept;
+
 	const Moobaa moobaa_;
 	const Map map_;
 };

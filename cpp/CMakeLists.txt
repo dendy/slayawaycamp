@@ -20,7 +20,7 @@ add_executable(slayawaycamp
 )
 
 target_compile_definitions(slayawaycamp PRIVATE
-	SLAYAWAYCAMP_LEVELS_DIR=\"${root_dir}/levels\"
+	SLAYAWAYCAMP_MOVIES_DIR=\"${root_dir}/movies\"
 	SLAYAWAYCAMP_REFERENCE_DIR=\"${root_dir}/reference\"
 )
 

@@ -13,7 +13,7 @@ static std::filesystem::path getLastFilePath()
 	std::filesystem::path last;
 
 	for (const std::filesystem::directory_entry & entry :
-			std::filesystem::recursive_directory_iterator(SLAYAWAYCAMP_LEVELS_DIR)) {
+			std::filesystem::recursive_directory_iterator(SLAYAWAYCAMP_MOVIES_DIR)) {
 		if (entry.is_regular_file() && entry.path().extension() == ".camp") {
 			const std::filesystem::file_time_type entryTime = std::filesystem::last_write_time(entry);
 			if (last.empty() || entryTime > time) {
@@ -51,7 +51,7 @@ static App::Args getArgs(const std::string_view & name)
 			if (path.is_absolute()) {
 				return path;
 			} else {
-				return std::filesystem::path(SLAYAWAYCAMP_LEVELS_DIR) / path;
+				return std::filesystem::path(SLAYAWAYCAMP_MOVIES_DIR) / path;
 			}
 		}(),
 	};
