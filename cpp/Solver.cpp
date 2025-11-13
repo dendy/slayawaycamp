@@ -57,9 +57,6 @@ Solver::Solver(const Map & map, const SolutionCallback & cb)
 			}
 
 #ifdef ENABLE_DEBUG
-			// static const std::string_view kExpectedSteps = "rd";
-			static const std::string_view kExpectedSteps = "urdludluludruldrd";
-
 			printf("move: from: %d to: %s same: %d id: %d\n", currentMoveId, nameForDir(dir).data(), moveRes.same, moveRes.id);
 			if (!moveRes.same) {
 				const Move & m = moves_[moveRes.id];
@@ -86,7 +83,7 @@ Solver::Solver(const Map & map, const SolutionCallback & cb)
 			const Move & m = moves_[moveRes.id];
 			const std::vector<int> steps = _getSteps(moveRes.id);
 			const std::string stepsString = _stepsToString(steps);
-			if (stepsString == kExpectedSteps) {
+			if (stepsString == kDebugExpectedSteps) {
 				int b = 1;
 			}
 #endif
