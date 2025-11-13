@@ -9,14 +9,21 @@
 
 Solver::Solver(const Map & map)
 {
-	_addMove(Move {
-		.previousId = -1,
-		.state = map.state,
-	}, false);
+	{
+		const MoveRes init = _addMove(Move {
+			.previousId = -1,
+			.state = map.state,
+		});
+		assert(!init.same);
+		moveIdsLeft_.push(init.id);
+	}
 
 	while (!moveIdsLeft_.empty()) {
 		const int currentMoveId = moveIdsLeft_.front();
 		moveIdsLeft_.pop();
+
+		const int currentDistance = _moveDistance(currentMoveId);
+		const bool isLastTurn = map.turns != -1 && currentDistance == map.turns - 1;
 
 		for (const Dir dir : kAllDirs) {
 #ifdef ENABLE_DEBUG
@@ -25,21 +32,28 @@ Solver::Solver(const Map & map)
 			}
 #endif
 
-			const Move & currentMove = moves_[currentMoveId];
-			const State & currentState = currentMove.state;
-
-			State state = currentState;
+			State state = moves_[currentMoveId].state;
 
 			const Player::Result result = Player::play(map, state, dir);
+
+			if (result == Player::Result::Fail) {
+				continue;
+			}
 
 			const MoveRes moveRes = _addMove(Move {
 				.dir = dir,
 				.previousId = currentMoveId,
 				.state = std::move(state),
-			}, result == Player::Result::Win);
+			});
 
-			if (result == Player::Result::Win && !moveRes.same) {
-				winMoveIds_.push_back(moveRes.id);
+			if (!moveRes.same) {
+				if (result == Player::Result::Win) {
+					winMoveIds_.push_back(moveRes.id);
+				} else {
+					if (!isLastTurn) {
+						moveIdsLeft_.push(moveRes.id);
+					}
+				}
 			}
 
 #ifdef ENABLE_DEBUG
@@ -86,7 +100,7 @@ Solver::Solver(const Map & map)
 	static constexpr int kShowStepsVerbosity = 2;
 	static constexpr int kShowStepsCount = -1;
 
-	printf("moves: total: %d win: %d\n", int(moves_.size()), int(winMoveIds_.size()));
+	printf("moves: %d wins: %d\n", int(moves_.size()), int(winMoveIds_.size()));
 	if (kShowStepsVerbosity > 0) {
 		for (const int winMoveId : winMoveIds_) {
 			std::vector<int> seq;
@@ -136,7 +150,7 @@ std::string Solver::_stepsToString(const std::vector<int> & steps) const noexcep
 }
 
 
-Solver::MoveRes Solver::_addMove(Move && move, const bool win)
+Solver::MoveRes Solver::_addMove(Move && move)
 {
 	const auto it = moveIdForState_.find(move.state);
 	if (it != moveIdForState_.end()) {
@@ -156,9 +170,6 @@ Solver::MoveRes Solver::_addMove(Move && move, const bool win)
 		const int id = moves_.size();
 		moveIdForState_[move.state] = id;
 		moves_.push_back(std::move(move));
-		if (!win) {
-			moveIdsLeft_.push(id);
-		}
 		return MoveRes {
 			.id = id,
 			.same = false,

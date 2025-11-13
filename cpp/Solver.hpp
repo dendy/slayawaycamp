@@ -28,7 +28,7 @@ private:
 	std::string _stepsToString(const std::vector<int> & steps) const noexcept;
 
 	int _moveDistance(const int moveId) const noexcept;
-	MoveRes _addMove(Move && move, bool win);
+	MoveRes _addMove(Move && move);
 
 	std::unordered_map<State, int> moveIdForState_;
 	std::vector<Move> moves_;
