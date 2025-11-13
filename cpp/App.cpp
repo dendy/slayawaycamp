@@ -46,7 +46,7 @@ App::App(Args && args) :
 
 void App::_execMap() noexcept
 {
-	Solver solver(map_);
+	Solver solver(map_, [] (Solver::Solution &&) {});
 }
 
 
@@ -191,6 +191,17 @@ void App::_execMoobaa() noexcept
 
 			const Map map = Map::load(seriesPath / serie.filename);
 
+			const auto bestSolution = [&map] () -> Solver::Solution {
+				Solver::Solution best;
+				Solver solver(map, [&best] (Solver::Solution && solution) {
+					if (best.steps.empty() || solution.steps.size() < best.steps.size()) {
+						best = std::move(solution);
+					}
+				});
+				assert(!best.steps.empty());
+				return best;
+			}();
+
 			const auto checkName = [&moobaaSerie, &map] () -> bool {
 				std::string mname = moobaaSerie.shortName;
 				std::for_each(mname.begin(), mname.end(), [] (char & c) { c = std::tolower(c); });
@@ -227,7 +238,17 @@ void App::_execMoobaa() noexcept
 				continue;
 			}
 
+			assert(bestSolution.steps.size() <= moobaaSerie.steps.size());
+
 			printf("moobaa:         OK\n");
+
+			if (bestSolution.steps.size() < moobaaSerie.steps.size()) {
+				printf("moobaa:         FOUND BETTER: (%d) [%s] -> (%d) [%s]\n",
+						int(moobaaSerie.steps.size()),
+						stepsToString(moobaaSerie.steps).c_str(),
+						int(bestSolution.steps.size()),
+						stepsToString(bestSolution.steps).c_str());
+			}
 		}
 	};
 

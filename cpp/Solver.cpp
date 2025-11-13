@@ -7,7 +7,7 @@
 
 
 
-Solver::Solver(const Map & map)
+Solver::Solver(const Map & map, const SolutionCallback & cb)
 {
 	{
 		const MoveRes init = _addMove(Move {
@@ -101,15 +101,17 @@ Solver::Solver(const Map & map)
 	static constexpr int kShowStepsCount = -1;
 
 	printf("moves: %d wins: %d\n", int(moves_.size()), int(winMoveIds_.size()));
-	if (kShowStepsVerbosity > 0) {
-		for (const int winMoveId : winMoveIds_) {
-			std::vector<int> seq;
-			for (int id = winMoveId; id != -1;) {
-				seq.push_back(id);
-				id = moves_[id].previousId;
-				if (moves_[id].previousId == -1) break;
-			}
-			std::reverse(seq.begin(), seq.end());
+
+	for (const int winMoveId : winMoveIds_) {
+		std::vector<int> seq;
+		for (int id = winMoveId; id != -1;) {
+			seq.push_back(id);
+			id = moves_[id].previousId;
+			if (moves_[id].previousId == -1) break;
+		}
+		std::reverse(seq.begin(), seq.end());
+
+		if (kShowStepsVerbosity > 0) {
 			printf("win move: %d (steps: %d)\n", winMoveId, _moveDistance(winMoveId));
 			if (kShowStepsVerbosity > 1) {
 				int stepIndex = 0;
@@ -122,6 +124,16 @@ Solver::Solver(const Map & map)
 				}
 			}
 		}
+
+		cb(Solution {
+			.steps = [this, &seq] () -> std::vector<Dir> {
+				std::vector<Dir> steps;
+				for (const int id : seq) {
+					steps.push_back(moves_[id].dir);
+				}
+				return steps;
+			}(),
+		});
 	}
 }
 

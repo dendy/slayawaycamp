@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <functional>
 #include <queue>
 
 #include "Map.hpp"
@@ -10,7 +11,13 @@
 
 class Solver {
 public:
-	Solver(const Map & map);
+	struct Solution {
+		std::vector<Dir> steps;
+	};
+
+	using SolutionCallback = std::function<void(Solution && solution)>;
+
+	Solver(const Map & map, const SolutionCallback & cb);
 
 private:
 	struct Move {
