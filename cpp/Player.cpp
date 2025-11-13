@@ -577,7 +577,7 @@ Player::Result Player::_step(const Dir dir)
 		return Result::Fail;
 	}
 
-	if (extra.win != Extra::Win::None) {
+	if (extra.win != Extra::Win::None || win) {
 		return Result::Win;
 	}
 
