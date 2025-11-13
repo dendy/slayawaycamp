@@ -31,18 +31,30 @@ static std::filesystem::path getLastFilePath()
 }
 
 
-static std::filesystem::path getLevelFilePath(const std::string_view & name)
+static App::Args getArgs(const std::string_view & name)
 {
 	if (name == "last") {
-		return getLastFilePath();
-	} else {
-		const std::filesystem::path path = name;
-		if (path.is_absolute()) {
-			return path;
-		} else {
-			return std::filesystem::path(SLAYAWAYCAMP_LEVELS_DIR) / path;
-		}
+		return App::Args {
+			.mapFilePath = getLastFilePath(),
+		};
 	}
+
+	if (name == "moobaa") {
+		return App::Args {
+			.moobaa = true,
+		};
+	}
+
+	return App::Args {
+		.mapFilePath = [&name] () -> std::filesystem::path {
+			const std::filesystem::path path = name;
+			if (path.is_absolute()) {
+				return path;
+			} else {
+				return std::filesystem::path(SLAYAWAYCAMP_LEVELS_DIR) / path;
+			}
+		}(),
+	};
 }
 
 
@@ -52,9 +64,9 @@ int main(int argc, char ** argv)
 		throw std::runtime_error("Usage: slayawaycamp <level>");
 	}
 
-	const std::filesystem::path levelFilePath = getLevelFilePath(argv[1]);
+	App::Args args = getArgs(argv[1]);
 
-	App app(levelFilePath);
+	App app(std::move(args));
 
 	return 0;
 }

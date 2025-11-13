@@ -6,11 +6,33 @@
 
 
 
-App::App(const std::filesystem::path & path) :
-	map(Map::load(path))
+App::App(Args && args) :
+	moobaa([&args] () -> Moobaa {
+		if (args.moobaa) {
+			return Moobaa::load();
+		} else {
+			return {};
+		}
+	}()),
+	map([&args] () -> Map {
+		if (!args.mapFilePath.empty()) {
+			return Map::load(args.mapFilePath);
+		} else {
+			return {};
+		}
+	}())
 {
-	Map::draw(map);
-	exec();
+	if (args.moobaa) {
+		for (const auto it : moobaa.movieForName) {
+			const Moobaa::Movie & movie = it.second;
+			printf("movie: %s\n", movie.name.c_str());
+		}
+	}
+
+	if (!map.shortName.empty()) {
+		Map::draw(map);
+		exec();
+	}
 }
 
 

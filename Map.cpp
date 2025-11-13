@@ -244,6 +244,8 @@ Map Map::load(const std::filesystem::path & path)
 	const int height = (lines.size() - 1) / 2;
 	assert(height <= kMaxMapSize);
 
+	assert(!shortName.empty());
+
 	Killer killer {
 		.pos = Pos::null(),
 	};

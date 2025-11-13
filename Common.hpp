@@ -13,6 +13,8 @@ enum class Dir {
 	Left, Right, Up, Down
 };
 
+inline static constexpr Dir kNullDir = Dir(-1);
+
 
 
 
@@ -89,6 +91,16 @@ inline std::string_view nameForDir(const Dir & dir) noexcept
 	case Dir::Down:  return "down";
 	}
 	assert(false);
+}
+
+
+inline Dir dirForName(const std::string_view & name) noexcept
+{
+	if (name == "left") return Dir::Left;
+	if (name == "right") return Dir::Right;
+	if (name == "up") return Dir::Up;
+	if (name == "down") return Dir::Down;
+	return kNullDir;
 }
 
 

@@ -7,6 +7,7 @@
 
 #include "Common.hpp"
 #include "Map.hpp"
+#include "Moobaa.hpp"
 
 
 
@@ -59,7 +60,12 @@ public:
 		Win win = Win::None;
 	};
 
-	App(const std::filesystem::path & path);
+	struct Args {
+		std::filesystem::path mapFilePath;
+		bool moobaa = false;
+	};
+
+	App(Args && args);
 
 	const Teleport & getOtherTeleport(const Teleport & teleport) const noexcept;
 	void trySwitchLight(State & state, const Wall & wall, Dir dir, Extra & extra) noexcept;
@@ -76,5 +82,6 @@ public:
 
 	void exec() noexcept;
 
+	const Moobaa moobaa;
 	const Map map;
 };
