@@ -992,3 +992,15 @@ bool Map::hasTallWall(const Pos & pos, const Dir dir) const noexcept
 		assert(false);
 	}
 }
+
+
+const Teleport & Map::getOtherTeleport(const Teleport & teleport) const noexcept
+{
+	const auto it = std::find_if(teleports.begin(), teleports.end(),
+			[&teleport] (const Teleport & t) {
+				if (t.pos == teleport.pos) return false;
+				return t.color == teleport.color;
+			});
+	assert(it != teleports.end());
+	return *it;
+}

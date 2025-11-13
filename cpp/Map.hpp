@@ -3,7 +3,71 @@
 
 #include <filesystem>
 
-#include "Common.hpp"
+#include "State.hpp"
+
+
+
+
+struct Phone {
+	Pos pos;
+	Color color;
+};
+
+
+
+
+struct Portal {
+	Pos pos;
+};
+
+
+
+
+struct Wall {
+	enum class Type {
+		Normal,
+		Escape,
+		Switch,
+		Short,
+		Zap,
+	};
+
+	Type type;
+	Pos pos;
+	bool win = false;
+
+	bool operator==(const Wall & other) const noexcept
+	{
+		return pos == other.pos;
+	}
+};
+
+
+
+
+struct Gum {
+	Pos pos;
+};
+
+
+
+
+struct Teleport {
+	Pos pos;
+	Color color;
+};
+
+
+
+
+struct Trap {
+	Pos pos;
+
+	bool operator==(const Trap & other) const noexcept
+	{
+		return pos == other.pos;
+	}
+};
 
 
 
@@ -64,4 +128,5 @@ struct Map {
 	const Wall & getWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasAnyWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasTallWall(const Pos & pos, Dir dir) const noexcept;
+	const Teleport & getOtherTeleport(const Teleport & teleport) const noexcept;
 };
