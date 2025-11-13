@@ -1,0 +1,22 @@
+
+name: slayawaycamp
+
+cflags:
+  - -std=c17
+
+cxxflags:
+  - -std=c++23
+  - -Werror=return-type
+
+macros:
+  SLAYAWAYCAMP_MOVIES_DIR: '""'
+  SLAYAWAYCAMP_REFERENCE_DIR: '""'
+
+includes:
+
+files:
+  - .
+
+exclude:
+
+ignore:

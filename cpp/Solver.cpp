@@ -94,9 +94,6 @@ Solver::Solver(const Map & map, const SolutionCallback & cb)
 		return _moveDistance(a) < _moveDistance(b);
 	});
 
-	static constexpr int kShowStepsVerbosity = 2;
-	static constexpr int kShowStepsCount = -1;
-
 	printf("moves: %d wins: %d\n", int(moves_.size()), int(winMoveIds_.size()));
 
 	for (const int winMoveId : winMoveIds_) {
