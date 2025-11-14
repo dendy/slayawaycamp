@@ -822,6 +822,16 @@ void Map::draw(const Map & map)
 		m[" nzn"] = kCornerNormalDownRight;
 
 		// lrud 3 way corner 2 short 1 zap
+		m["szs "] = kCornerShortUpLeft;
+		m["s sz"] = kCornerShortUpLeft;
+		m["sz s"] = kCornerShortDownLeft;
+		m["s zs"] = kCornerShortDownLeft;
+		m["zss "] = kCornerShortUpRight;
+		m[" nsz"] = kCornerShortUpRight;
+		m["zs s"] = kCornerShortDownRight;
+		m[" szs"] = kCornerShortDownRight;
+
+		// lrud 3 way corner 2 short 1 zap
 		m["ssz "] = kCornerShortLeftRightUp;
 		m["ss z"] = kCornerShortLeftRightDown;
 		m["z ss"] = kCornerShortUpDownLeft;
