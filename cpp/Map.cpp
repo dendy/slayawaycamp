@@ -805,6 +805,12 @@ void Map::draw(const Map & map)
 		m["z nn"] = kCornerNormalUpDownShortLeft;
 		m[" znn"] = kCornerNormalUpDownShortRight;
 
+		// lrud 3 way corner 2 short 1 zap
+		m["ssz "] = kCornerShortLeftRightUp;
+		m["ss z"] = kCornerShortLeftRightDown;
+		m["z ss"] = kCornerShortUpDownLeft;
+		m[" zss"] = kCornerShortUpDownRight;
+
 		return m;
 	}();
 
@@ -900,7 +906,7 @@ void Map::draw(const Map & map)
 			std::queue<Pos> queue;
 			queue.push(startPos);
 
-			bool blocked = true;
+			bool blocked = !hasSomething(startPos);
 			int count = 0;
 
 			while (!queue.empty()) {
