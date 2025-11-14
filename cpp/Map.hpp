@@ -78,6 +78,7 @@ struct Map {
 
 	std::string shortName;
 	std::string fullName;
+	std::string moobaaName;
 	int turns = -1;
 
 	int width, height;

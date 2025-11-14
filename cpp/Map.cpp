@@ -220,6 +220,7 @@ Map Map::load(const std::filesystem::path & path)
 {
 	static constexpr std::string_view kShortNamePrefix = "name: ";
 	static constexpr std::string_view kFullNamePrefix = "full: ";
+	static constexpr std::string_view kMoobaaNamePrefix = "moba: ";
 	static constexpr std::string_view kTurnsPrefix = "turns: ";
 
 	printf("Loading: %s\n", path.filename().c_str());
@@ -227,6 +228,7 @@ Map Map::load(const std::filesystem::path & path)
 
 	std::string shortName;
 	std::string fullName;
+	std::string moobaaName;
 	int turns = -1;
 
 	int maxLength = 0;
@@ -241,6 +243,7 @@ Map Map::load(const std::filesystem::path & path)
 		if (line.starts_with(kShortNamePrefix)) {
 			assert(shortName.empty());
 			shortName = line.substr(kShortNamePrefix.size());
+			assert(shortName == makeLower(shortName));
 			printf("short name: %s\n", shortName.c_str());
 			fflush(stdout);
 			continue;
@@ -248,8 +251,14 @@ Map Map::load(const std::filesystem::path & path)
 		if (line.starts_with(kFullNamePrefix)) {
 			assert(fullName.empty());
 			fullName = line.substr(kFullNamePrefix.size());
+			assert(fullName == makeLower(fullName));
 			printf("full name: %s\n", fullName.c_str());
 			fflush(stdout);
+			continue;
+		}
+		if (line.starts_with(kMoobaaNamePrefix)) {
+			assert(moobaaName.empty());
+			moobaaName = line.substr(kMoobaaNamePrefix.size());
 			continue;
 		}
 		if (line.starts_with(kTurnsPrefix)) {
@@ -514,6 +523,7 @@ Map Map::load(const std::filesystem::path & path)
 	return Map {
 		.shortName = std::move(shortName),
 		.fullName = std::move(fullName),
+		.moobaaName = std::move(moobaaName),
 		.turns = turns,
 		.width = width,
 		.height = height,
@@ -852,6 +862,14 @@ void Map::draw(const Map & map)
 		m["nn z"] = kCornerNormalLeftRight;
 		m["z nn"] = kCornerNormalUpDown;
 		m[" znn"] = kCornerNormalUpDown;
+
+		// lrud 2 normal 2 zap
+		m["nnzz"] = kCornerNormalLeftRight;
+		m["zznn"] = kCornerNormalUpDown;
+		m["nznz"] = kCornerNormalUpLeft;
+		m["nzzn"] = kCornerNormalDownLeft;
+		m["znnz"] = kCornerNormalUpRight;
+		m["znzn"] = kCornerNormalDownRight;
 
 		return m;
 	}();

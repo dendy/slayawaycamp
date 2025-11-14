@@ -63,32 +63,35 @@ Solver::Solver(const Map & map, const SolutionCallback & cb)
 			}
 
 #ifdef ENABLE_DEBUG
-			printf("move: from: %d to: %s same: %d id: %d\n", currentMoveId, nameForDir(dir).data(), moveRes.same, moveRes.id);
-			if (!moveRes.same) {
-				const Move & m = moves_[moveRes.id];
-				printf("    killer: %d %d\n", m.state.killer.pos.x, m.state.killer.pos.y);
-				for (const Dude & d : m.state.dudes) {
-					printf("    dude: %d %d - %s", d.pos.x, d.pos.y, nameForDudeType(d.type).data());
-					switch (d.type) {
-					case Dude::Type::Victim:
-					case Dude::Type::Cat:
-						break;
-					case Dude::Type::Cop:
-					case Dude::Type::Swat:
-						printf(" (%s)", nameForDir(d.dir).data());
-						break;
-					case Dude::Type::Drop:
-						printf(" (%s)", nameForOrientation(d.orientation).data());
-						break;
+			const std::vector<int> steps = _getSteps(moveRes.id);
+			const std::string stepsString = _stepsToString(steps);
+
+			if (!kDebugOnlyExpectedSteps || kDebugExpectedSteps.starts_with(stepsString)) {
+				printf("move: from: %d to: %s same: %d id: %d\n", currentMoveId, nameForDir(dir).data(), moveRes.same, moveRes.id);
+				if (!moveRes.same) {
+					const Move & m = moves_[moveRes.id];
+					printf("    killer: %d %d\n", m.state.killer.pos.x, m.state.killer.pos.y);
+					for (const Dude & d : m.state.dudes) {
+						printf("    dude: %d %d - %s", d.pos.x, d.pos.y, nameForDudeType(d.type).data());
+						switch (d.type) {
+						case Dude::Type::Victim:
+						case Dude::Type::Cat:
+							break;
+						case Dude::Type::Cop:
+						case Dude::Type::Swat:
+							printf(" (%s)", nameForDir(d.dir).data());
+							break;
+						case Dude::Type::Drop:
+							printf(" (%s)", nameForOrientation(d.orientation).data());
+							break;
+						}
+						printf("\n");
 					}
-					printf("\n");
 				}
 			}
 			fflush(stdout);
 
 			const Move & m = moves_[moveRes.id];
-			const std::vector<int> steps = _getSteps(moveRes.id);
-			const std::string stepsString = _stepsToString(steps);
 			if (stepsString == kDebugExpectedSteps) {
 				int b = 1;
 			}

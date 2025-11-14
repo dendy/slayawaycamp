@@ -14,8 +14,8 @@
 static constexpr int kDebugMoveId = 6;
 static constexpr Dir kDebugMoveDir = Dir::Down;
 
-static const std::string_view kDebugExpectedSteps = "llur";
-// static const std::string_view kDebugExpectedSteps = "llurrdurullululullu";
+static constexpr std::string_view kDebugExpectedSteps = "ldururrdruruldurdldldllururdlur";
+static constexpr bool kDebugOnlyExpectedSteps = false;
 #endif
 
 

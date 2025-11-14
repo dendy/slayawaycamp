@@ -199,7 +199,7 @@ void App::_execMoobaa() noexcept
 
 			const int moobaaIndex = serie.id - 1;
 			if (moobaaIndex >= moobaaSeries.size()) {
-				printf("moobaa:         fail: no mooba steps\n");
+				printf("moobaa:         error: no mooba steps\n");
 				continue;
 			}
 
@@ -221,12 +221,14 @@ void App::_execMoobaa() noexcept
 			}();
 
 			const auto checkName = [&moobaaSerie, &map] () -> bool {
-				const std::string mname = makeLower(moobaaSerie.shortName);
-				return mname == map.shortName;
+				const std::string moobaaShortName = makeLower(moobaaSerie.shortName);
+				if (moobaaShortName == map.shortName) return true;
+				if (moobaaShortName == map.fullName) return true;
+				if (moobaaSerie.shortName == map.moobaaName) return true;
+				return false;
 			};
 			if (!checkName()) {
-				printf("moobaa:         fail: name mismatch\n");
-				continue;
+				printf("moobaa:         error: name mismatch\n");
 			}
 
 			printf("moobaa:         expected steps (%d): %s\n",
@@ -240,7 +242,7 @@ void App::_execMoobaa() noexcept
 				stepCount++;
 				result = Player::play(map, state, dir);
 				if (stepCount < moobaaSerie.steps.size() && result != Player::Result::None) {
-					printf("moobaa:         fail: unexpected end (%s) after steps: (%d)\n",
+					printf("moobaa:         error: unexpected end (%s) after steps: (%d)\n",
 							result == Player::Result::Win ? "win" : "fail", stepCount);
 					break;
 				}
@@ -250,7 +252,7 @@ void App::_execMoobaa() noexcept
 			}
 
 			if (result != Player::Result::Win) {
-				printf("moobaa:         fail: not a win (%s)\n",
+				printf("moobaa:         error: not a win (%s)\n",
 						result == Player::Result::None ? "none" : "fail");
 				continue;
 			}
