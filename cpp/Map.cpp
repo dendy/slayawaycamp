@@ -141,6 +141,7 @@ static const QString kCornerShortUpNormalLeft        = QString::fromUtf8("╛");
 static const QString kCornerShortUpNormalRight       = QString::fromUtf8("╘");
 
 static const QString kCornerBlock = QString::fromUtf8("░");
+static const QString kCornerZap   = QString::fromUtf8("z");
 
 
 
@@ -794,6 +795,16 @@ void Map::draw(const Map & map)
 		m["ns s"] = kCornerShortLeftRightDown;
 		m[" sns"] = kCornerShortUpDownRight;
 
+		// zap
+		m["zz  "] = kCornerZap;
+		m["  zz"] = kCornerZap;
+
+		// lrud 3 way corner 2 normal 1 zap
+		m["nnz "] = kCornerNormalLeftRightShortUp;
+		m["nn z"] = kCornerNormalLeftRightShortDown;
+		m["z nn"] = kCornerNormalUpDownShortLeft;
+		m[" znn"] = kCornerNormalUpDownShortRight;
+
 		return m;
 	}();
 
@@ -807,10 +818,13 @@ void Map::draw(const Map & map)
 
 		const auto tag = [&cornerTag] (const Wall * const wall, const Dir dir) {
 			if (wall) {
+				char & c= cornerTag[int(dir)];
 				if (wall->type == Wall::Type::Normal) {
-					cornerTag[int(dir)] = 'n';
+					c = 'n';
 				} else if (wall->type == Wall::Type::Short) {
-					cornerTag[int(dir)] = 's';
+					c = 's';
+				} else if (wall->type == Wall::Type::Zap) {
+					c = 'z';
 				}
 			}
 		};
@@ -902,7 +916,7 @@ void Map::draw(const Map & map)
 					if (map.contains(dirPos)) {
 						bool & a = checkedTile(dirPos);
 						if (!a) {
-							if (!map.hasTallWall(p, dir)) {
+							if (!map.hasAnyWall(p, dir)) {
 								if (hasSomething(dirPos)) {
 									blocked = false;
 								}
