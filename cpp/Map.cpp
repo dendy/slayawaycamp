@@ -277,6 +277,12 @@ Map Map::load(const std::filesystem::path & path)
 
 	assert(!shortName.empty());
 
+	for (QString & line : lines) {
+		while (line.length() < maxLength) {
+			line += ' ';
+		}
+	}
+
 	Killer killer {
 		.pos = Pos::null(),
 	};
@@ -781,7 +787,7 @@ void Map::draw(const Map & map)
 		m["s nn"] = kCornerNormalUpDownShortLeft;
 		m[" snn"] = kCornerNormalUpDownShortRight;
 
-		// lrud 3 way corner 2 normal
+		// lrud 3 way corner 2 normal 1 short
 		m["nsn "] = kCornerNormalLeftRightUp;
 		m["n ns"] = kCornerNormalUpDownLeft;
 		m["ns n"] = kCornerNormalLeftRightDown;
@@ -801,21 +807,41 @@ void Map::draw(const Map & map)
 		m["ns s"] = kCornerShortLeftRightDown;
 		m[" sns"] = kCornerShortUpDownRight;
 
-		// zap
+		// lrud straight zap
 		m["zz  "] = kCornerZap;
 		m["  zz"] = kCornerZap;
 
 		// lrud 3 way corner 2 normal 1 zap
-		m["nnz "] = kCornerNormalLeftRightShortUp;
-		m["nn z"] = kCornerNormalLeftRightShortDown;
-		m["z nn"] = kCornerNormalUpDownShortLeft;
-		m[" znn"] = kCornerNormalUpDownShortRight;
+		m["nzn "] = kCornerNormalUpLeft;
+		m["n nz"] = kCornerNormalUpLeft;
+		m["nz n"] = kCornerNormalDownLeft;
+		m["n zn"] = kCornerNormalDownLeft;
+		m["znn "] = kCornerNormalUpRight;
+		m[" nnz"] = kCornerNormalUpRight;
+		m["zn n"] = kCornerNormalDownRight;
+		m[" nzn"] = kCornerNormalDownRight;
 
 		// lrud 3 way corner 2 short 1 zap
 		m["ssz "] = kCornerShortLeftRightUp;
 		m["ss z"] = kCornerShortLeftRightDown;
 		m["z ss"] = kCornerShortUpDownLeft;
 		m[" zss"] = kCornerShortUpDownRight;
+
+		// lrud 1 short 1 zap corner
+		m["s z "] = kCornerShortUpLeft;
+		m["s  z"] = kCornerShortDownLeft;
+		m[" sz "] = kCornerShortUpRight;
+		m[" s z"] = kCornerShortDownRight;
+		m["z s "] = kCornerShortUpLeft;
+		m[" zs "] = kCornerShortUpRight;
+		m["z  s"] = kCornerShortDownLeft;
+		m[" z s"] = kCornerShortDownRight;
+
+		// lrud 2 straight normal 1 zap
+		m["nnz "] = kCornerNormalLeftRight;
+		m["nn z"] = kCornerNormalLeftRight;
+		m["z nn"] = kCornerNormalUpDown;
+		m[" znn"] = kCornerNormalUpDown;
 
 		return m;
 	}();
