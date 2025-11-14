@@ -7,6 +7,12 @@
 
 
 
+void Solver::solve(const Map & map, const SolutionCallback & cb)
+{
+	Solver(map, cb);
+}
+
+
 Solver::Solver(const Map & map, const SolutionCallback & cb)
 {
 	{

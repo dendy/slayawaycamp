@@ -17,7 +17,7 @@ public:
 
 	using SolutionCallback = std::function<void(Solution && solution)>;
 
-	Solver(const Map & map, const SolutionCallback & cb);
+	static void solve(const Map & map, const SolutionCallback & cb);
 
 private:
 	struct Move {
@@ -30,6 +30,8 @@ private:
 		int id;
 		bool same;
 	};
+
+	Solver(const Map & map, const SolutionCallback & cb);
 
 	std::vector<int> _getSteps(const int moveId) const noexcept;
 	std::string _stepsToString(const std::vector<int> & steps) const noexcept;

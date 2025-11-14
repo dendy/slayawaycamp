@@ -6,8 +6,7 @@
 
 Player::Result Player::play(const Map & map, State & state, const Dir dir)
 {
-	Player player(map, state);
-	return player._step(dir);
+	return Player(map, state)._step(dir);
 }
 
 

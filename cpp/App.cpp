@@ -46,7 +46,7 @@ App::App(Args && args) :
 
 void App::_execMap() noexcept
 {
-	Solver solver(map_, [] (Solver::Solution &&) {});
+	Solver::solve(map_, [] (Solver::Solution &&) {});
 }
 
 
@@ -211,7 +211,7 @@ void App::_execMoobaa() noexcept
 
 			serie.bestSteps = [&map] () -> Steps {
 				Solver::Solution best;
-				Solver solver(map, [&best] (Solver::Solution && solution) {
+				Solver::solve(map, [&best] (Solver::Solution && solution) {
 					if (best.steps.empty() || solution.steps.size() < best.steps.size()) {
 						best = std::move(solution);
 					}

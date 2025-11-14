@@ -69,7 +69,7 @@ private:
 
 	bool _aimedByCop(const Dude & cop) const noexcept;
 	bool _aimedByAnyCop() const noexcept;
-	bool _aimedBySwat(const Dude & dude) const noexcept;
+	bool _aimedBySwat(const Dude & swat) const noexcept;
 	bool _aimedByAnySwat() const noexcept;
 
 	void _trySwitchLight(const Wall & wall, Dir dir, Extra & extra) noexcept;
