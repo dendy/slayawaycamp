@@ -402,7 +402,8 @@ void Player::_processExtra(Extra & extra) noexcept
 		return;
 	}
 
-	if (extra.killed.empty() && extra.dropped.empty() && extra.scared.empty() && extra.called.empty()) {
+	if (extra.killed.empty() && extra.dropped.empty() && extra.scared.empty() &&
+			extra.called.empty()) {
 		return;
 	}
 
@@ -428,10 +429,15 @@ void Player::_processExtra(Extra & extra) noexcept
 		if (it != state_.dudes.end()) {
 			const Dude & dude = *it;
 			if (dude.type == Dude::Type::Drop) {
-				// cannot rop onto another drop
+				// cannot drop onto another drop
 				continue;
 			}
 			_kill(dude, nextExtra, extra.scared);
+		}
+
+		if (dropPos == state_.killer.pos) {
+			extra.fail = Extra::Fail::Drop;
+			continue;
 		}
 
 		state_.moveDude(dropped.drop, Dude {

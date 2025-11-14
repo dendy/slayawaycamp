@@ -50,7 +50,7 @@ private:
 			Dir dir;
 		};
 		enum class Fail {
-			None, Catality, Escaped, Cop, Swat
+			None, Catality, Escaped, Cop, Swat, Drop
 		};
 		enum class Win {
 			None, Switch
