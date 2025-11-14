@@ -755,6 +755,12 @@ void Map::draw(const Map & map)
 		m["nnss"] = kCornerShortUpDownNormalCross;
 		m["ssnn"] = kCornerNormalUpDownShortCross;
 
+		// lrud normal and cross corner crosses
+		m["snsn"] = kCornerNormalUpDownShortCross;
+		m["snns"] = kCornerNormalUpDownShortCross;
+		m["nssn"] = kCornerNormalUpDownShortCross;
+		m["nsns"] = kCornerNormalUpDownShortCross;
+
 		// lrud normal and short 3-1 crosses
 		m["nsss"] = kCornerShortCross;
 		m["snss"] = kCornerShortCross;
