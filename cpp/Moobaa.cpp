@@ -100,7 +100,7 @@ Moobaa Moobaa::load()
 		}
 	};
 
-	const auto completeMovie = [&movie, &movieForName, &completeSerie] {
+	const auto completeMovie = [&movie, &completeSerie] {
 		if (!movie) return;
 		completeSerie();
 		movie = nullptr;
@@ -112,9 +112,10 @@ Moobaa Moobaa::load()
 		const MovieSuffix suffix = categoryForSuffix(name);
 // printf("am: name=(%s) s=%s c=%s\n", name.c_str(), suffix.suffix.data(), suffix.category.data()); fflush(stdout);
 		assert(suffix.category == category);
-		std::string realName = name.substr(0, name.size() - suffix.suffix.size());
+		const std::string realName = name.substr(0, name.size() - suffix.suffix.size());
+		const std::string keyName = makeLower(realName);
 		completeMovie();
-		auto r = movieForName.insert({realName, Movie {
+		auto r = movieForName.insert({keyName, Movie {
 			.name = realName,
 		}});
 		auto & it = r.first;
@@ -184,8 +185,7 @@ Moobaa Moobaa::load()
 				continue;
 			}
 
-			std::vector<Dir> steps = [] (std::string line) -> std::vector<Dir> {
-				std::for_each(line.begin(), line.end(), [] (char & c) { c = std::tolower(c); });
+			Steps steps = [] (const std::string & line) -> Steps {
 				const bool isDir = [&line] () -> bool {
 					for (const Dir dir : kAllDirs) {
 						const std::string_view name = nameForDir(dir);
@@ -195,7 +195,7 @@ Moobaa Moobaa::load()
 				}();
 				if (!isDir) return {};
 
-				std::vector<Dir> steps;
+				Steps steps;
 				std::string_view s = line;
 				while (!s.empty()) {
 					const auto eit = std::find_if(s.begin(), s.end(),
@@ -212,7 +212,7 @@ Moobaa Moobaa::load()
 				}
 
 				return steps;
-			}(line);
+			}(makeLower(line));
 
 			if (!steps.empty()) {
 				std::move(steps.begin(), steps.end(), std::back_inserter(serie.steps));

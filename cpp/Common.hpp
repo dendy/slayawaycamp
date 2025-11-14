@@ -15,6 +15,8 @@ enum class Dir {
 
 inline static constexpr Dir kNullDir = Dir(-1);
 
+using Steps = std::vector<Dir>;
+
 
 
 
@@ -173,12 +175,22 @@ inline std::string_view nameForCategory(const Category & category) noexcept
 
 
 
-inline std::string stepsToString(const std::vector<Dir> & steps) noexcept
+inline std::string stepsToString(const Steps & steps) noexcept
 {
 	std::string s;
 	for (const Dir dir: steps) {
 		s += shortNameForDir(dir);
 	}
+	return s;
+}
+
+
+
+
+inline std::string makeLower(const std::string_view & sv) noexcept
+{
+	std::string s(sv);
+	std::for_each(s.begin(), s.end(), [] (char & c) { c = std::tolower(c); });
 	return s;
 }
 

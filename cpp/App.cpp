@@ -52,23 +52,53 @@ void App::_execMap() noexcept
 
 void App::_execMoobaa() noexcept
 {
+	struct Serie {
+		int id;
+		std::filesystem::path filename;
+		Steps bestSteps;
+
+		bool operator<(const Serie & other) const noexcept { return id < other.id; }
+	};
+
 	struct Movie {
 		int id;
 		std::filesystem::path dirname;
 		std::string shortName;
 		std::string fullName;
+		std::unordered_map<Category, std::vector<Serie>> seriesForCategory;
 
 		bool operator<(const Movie & other) const noexcept { return id < other.id; }
 	};
 
-	struct Serie {
-		int id;
-		std::filesystem::path filename;
-
-		bool operator<(const Serie & other) const noexcept { return id < other.id; }
+	const auto & getMoobaaMovie = [this] (const Movie & movie) -> const Moobaa::Movie & {
+		auto it = moobaa_.movieForName.find(makeLower(movie.shortName));
+		const std::string fullMoobaaName = movie.shortName + ": " + movie.fullName;
+		if (it == moobaa_.movieForName.end()) {
+			it = moobaa_.movieForName.find(makeLower(fullMoobaaName));
+		}
+		if (it == moobaa_.movieForName.end()) {
+			printf("expected: short (%s) full (%s)\n", movie.shortName.c_str(), fullMoobaaName.c_str());
+			for (const auto & it : moobaa_.movieForName) {
+				const Moobaa::Movie & moobaaMovie = it.second;
+				printf("    moobaa: (%s)\n", it.first.c_str());
+			}
+			fflush(stdout);
+			throw std::runtime_error("Can't find moobaa movie");
+		}
+		return it->second;
 	};
 
-	const auto movies = [] () -> std::vector<Movie> {
+	const auto & getMoobaaSeries = [] (const Moobaa::Movie & moobaaMovie, const Category category) ->
+			const Moobaa::Series & {
+		switch (category) {
+		case Category::Base: return moobaaMovie.baseSeries;
+		case Category::NC17: return moobaaMovie.nc17Series;
+		case Category::Xtra: return moobaaMovie.xtraSeries;
+		}
+		assert(false);
+	};
+
+	auto movies = [] () -> std::vector<Movie> {
 		std::vector<Movie> movies;
 		for (const std::filesystem::directory_entry & entry :
 				std::filesystem::directory_iterator(SLAYAWAYCAMP_MOVIES_DIR)) {
@@ -118,36 +148,21 @@ void App::_execMoobaa() noexcept
 		return movies;
 	}();
 
-	const auto testCategory = [this] (const Movie & movie, const Category category) {
-		const auto & moobaaMovie = [this, &movie] () -> const Moobaa::Movie & {
-			auto it = moobaa_.movieForName.find(movie.shortName);
-			if (it == moobaa_.movieForName.end()) {
-				it = moobaa_.movieForName.find(movie.shortName + ": " + movie.fullName);
-			}
-			if (it == moobaa_.movieForName.end()) {
-				throw std::runtime_error("");
-			}
-			return it->second;
-		}();
+	const auto testCategory = [this, &getMoobaaMovie, &getMoobaaSeries]
+			(Movie & movie, const Category category) {
+		const Moobaa::Movie & moobaaMovie = getMoobaaMovie(movie);
 
 		printf("\n");
 		printf("moobaa: Testing movie category: (%02d) %s - %s\n",
 				movie.id, movie.shortName.c_str(), nameForCategory(category).data());
 		fflush(stdout);
 
-		const auto & moobaaSeries = [&moobaaMovie, category] () -> const Moobaa::Series & {
-			switch (category) {
-			case Category::Base: return moobaaMovie.baseSeries;
-			case Category::NC17: return moobaaMovie.nc17Series;
-			case Category::Xtra: return moobaaMovie.xtraSeries;
-			}
-			assert(false);
-		}();
+		const auto & moobaaSeries = getMoobaaSeries(moobaaMovie, category);
 
 		const std::filesystem::path seriesPath =
 				std::filesystem::path(SLAYAWAYCAMP_MOVIES_DIR) / movie.dirname / nameForCategory(category);
 
-		const auto series = [&seriesPath] () -> std::vector<Serie> {
+		const auto seriesPair = movie.seriesForCategory.insert({category, [&seriesPath] () -> std::vector<Serie> {
 			std::vector<Serie> series;
 			for (const std::filesystem::directory_entry & entry :
 					std::filesystem::directory_iterator(seriesPath)) {
@@ -172,9 +187,12 @@ void App::_execMoobaa() noexcept
 			}
 			std::sort(series.begin(), series.end());
 			return series;
-		}();
+		}()});
 
-		for (const Serie & serie : series) {
+		const auto & seriesIt = seriesPair.first;
+		std::vector<Serie> & series = seriesIt->second;
+
+		for (Serie & serie : series) {
 			printf("\n");
 			printf("moobaa:     serie: (%02d) %s\n", serie.id, serie.filename.c_str());
 			fflush(stdout);
@@ -191,7 +209,7 @@ void App::_execMoobaa() noexcept
 
 			const Map map = Map::load(seriesPath / serie.filename);
 
-			const auto bestSolution = [&map] () -> Solver::Solution {
+			serie.bestSteps = [&map] () -> Steps {
 				Solver::Solution best;
 				Solver solver(map, [&best] (Solver::Solution && solution) {
 					if (best.steps.empty() || solution.steps.size() < best.steps.size()) {
@@ -199,12 +217,11 @@ void App::_execMoobaa() noexcept
 					}
 				});
 				assert(!best.steps.empty());
-				return best;
+				return best.steps;
 			}();
 
 			const auto checkName = [&moobaaSerie, &map] () -> bool {
-				std::string mname = moobaaSerie.shortName;
-				std::for_each(mname.begin(), mname.end(), [] (char & c) { c = std::tolower(c); });
+				const std::string mname = makeLower(moobaaSerie.shortName);
 				return mname == map.shortName;
 			};
 			if (!checkName()) {
@@ -238,21 +255,21 @@ void App::_execMoobaa() noexcept
 				continue;
 			}
 
-			assert(bestSolution.steps.size() <= moobaaSerie.steps.size());
+			assert(serie.bestSteps.size() <= moobaaSerie.steps.size());
 
 			printf("moobaa:         OK\n");
 
-			if (bestSolution.steps.size() < moobaaSerie.steps.size()) {
+			if (serie.bestSteps.size() < moobaaSerie.steps.size()) {
 				printf("moobaa:         FOUND BETTER: (%d) [%s] -> (%d) [%s]\n",
 						int(moobaaSerie.steps.size()),
 						stepsToString(moobaaSerie.steps).c_str(),
-						int(bestSolution.steps.size()),
-						stepsToString(bestSolution.steps).c_str());
+						int(serie.bestSteps.size()),
+						stepsToString(serie.bestSteps).c_str());
 			}
 		}
 	};
 
-	for (const Movie & movie : movies) {
+	for (Movie & movie : movies) {
 		for (const Category & category : kAllCategories) {
 			try {
 				testCategory(movie, category);
@@ -260,4 +277,71 @@ void App::_execMoobaa() noexcept
 			}
 		}
 	}
+
+	int solvedSerieCount = 0;
+	int betterSerieCount = 0;
+	int totalSerieCount = 0;
+
+	std::vector<const Moobaa::Serie*> checkedMoobaSeries;
+
+	for (const Movie & movie : movies) {
+		printf("movie: %s\n", movie.shortName.c_str());
+		const Moobaa::Movie & moobaaMovie = getMoobaaMovie(movie);
+
+		for (const Category & category : kAllCategories) {
+			const auto seriesIt = movie.seriesForCategory.find(category);
+			if (seriesIt == movie.seriesForCategory.end()) continue;
+
+			const std::vector<Serie> & series = seriesIt->second;
+			printf("    series (%s) (%d)\n", nameForCategory(category).data(), int(series.size()));
+
+			totalSerieCount += series.size();
+			solvedSerieCount += series.size();
+
+			const Moobaa::Series & moobaaSeries = getMoobaaSeries(moobaaMovie, category);
+
+			for (const Serie & serie : series) {
+				const int moobaaIndex = serie.id - 1;
+				if (moobaaIndex >= moobaaSeries.size()) {
+					printf("        (%02d) - no moobaa serie\n", serie.id);
+					continue;
+				}
+
+				const Moobaa::Serie & moobaaSerie = moobaaSeries[moobaaIndex];
+				checkedMoobaSeries.push_back(&moobaaSerie);
+
+				assert(serie.bestSteps.size() <= moobaaSerie.steps.size());
+				if (serie.bestSteps.size() < moobaaSerie.steps.size()) {
+					betterSerieCount += 1;
+					printf("        (%02d) better: (%d) [%s] -> (%d) [%s]\n",
+						serie.id,
+						int(moobaaSerie.steps.size()),
+						stepsToString(moobaaSerie.steps).c_str(),
+						int(serie.bestSteps.size()),
+						stepsToString(serie.bestSteps).c_str());
+				}
+			}
+		}
+	}
+
+	for (const auto & it : moobaa_.movieForName) {
+		const Moobaa::Movie & moobaaMovie = it.second;
+		for (const Category category : kAllCategories) {
+			const Moobaa::Series & moobaaSeries = getMoobaaSeries(moobaaMovie, category);
+			for (const Moobaa::Serie & moobaaSerie : moobaaSeries) {
+				const auto it = std::find_if(checkedMoobaSeries.begin(), checkedMoobaSeries.end(),
+						[&moobaaSerie] (const auto & e) {
+							return e == &moobaaSerie;
+						});
+				if (it != checkedMoobaSeries.end()) {
+					continue;
+				}
+				totalSerieCount += 1;
+			}
+		}
+	}
+
+	printf("total  : %d\n", totalSerieCount);
+	printf("better : %d\n", betterSerieCount);
+	printf("solved : %d\n", solvedSerieCount);
 }

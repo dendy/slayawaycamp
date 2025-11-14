@@ -120,8 +120,8 @@ Solver::Solver(const Map & map, const SolutionCallback & cb)
 		}
 
 		cb(Solution {
-			.steps = [this, &seq] () -> std::vector<Dir> {
-				std::vector<Dir> steps;
+			.steps = [this, &seq] () -> Steps {
+				Steps steps;
 				for (const int id : seq) {
 					steps.push_back(moves_[id].dir);
 				}

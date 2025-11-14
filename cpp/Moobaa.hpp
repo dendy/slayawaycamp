@@ -10,8 +10,6 @@
 
 
 struct Moobaa {
-	using Steps = std::vector<Dir>;
-
 	struct Serie {
 		std::string shortName;
 		std::string fullName;

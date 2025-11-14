@@ -12,7 +12,7 @@
 class Solver {
 public:
 	struct Solution {
-		std::vector<Dir> steps;
+		Steps steps;
 	};
 
 	using SolutionCallback = std::function<void(Solution && solution)>;
