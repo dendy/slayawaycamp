@@ -40,6 +40,7 @@ static const QString kGum          = QString::fromUtf8("gg");
 
 static const QString kCop          = QString::fromUtf8("C");
 static const QString kSwat         = QString::fromUtf8("S");
+static const QString kSwatGum      = QString::fromUtf8("W");
 static const QString kDrop         = QString::fromUtf8("D");
 static const QString kPhone        = QString::fromUtf8("P");
 static const QString kTeleport     = QString::fromUtf8("T");
@@ -379,6 +380,15 @@ Map Map::load(const std::filesystem::path & path)
 				});
 				assert(portal.pos == Pos::null());
 				portal.pos = Pos{x, y};
+			} else if (tile.at(0) == kCat.at(0)) {
+				dudes.push_back(Dude {
+					.type = Dude::Type::Cat,
+					.pos = Pos{x, y},
+				});
+				teleports.push_back(Teleport {
+					.pos = Pos{x, y},
+					.color = colorFromString(tile.at(1)),
+				});
 			} else if (tile == kMine) {
 				mines.push_back(Mine {
 					.pos = Pos{x, y},
@@ -394,6 +404,15 @@ Map Map::load(const std::filesystem::path & path)
 					.dir = dirFromString(tile.at(1)),
 				});
 			} else if (tile.at(0) == kSwat) {
+				dudes.push_back(Dude {
+					.type = Dude::Type::Swat,
+					.pos = Pos{x, y},
+					.dir = dirFromString(tile.at(1)),
+				});
+			} else if (tile.at(0) == kSwatGum) {
+				gums.push_back(Gum {
+					.pos = Pos{x, y},
+				});
 				dudes.push_back(Dude {
 					.type = Dude::Type::Swat,
 					.pos = Pos{x, y},

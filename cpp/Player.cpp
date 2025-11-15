@@ -197,8 +197,12 @@ Player::Res Player::_go(const Pos & fromPos, const Dir dir, const bool portal) n
 				const Teleport & teleport = *it;
 				const Teleport & otherTeleport = map_.getOtherTeleport(teleport);
 				addTeleport(teleport);
-				addTeleport(otherTeleport);
-				pos = otherTeleport.pos;
+				if (state_.findDude(otherTeleport.pos) != state_.dudes.end()) {
+					// other teleport is blocked
+				} else {
+					addTeleport(otherTeleport);
+					pos = otherTeleport.pos;
+				}
 				continue;
 			}
 		}
