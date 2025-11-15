@@ -1,1 +1,20 @@
 name: frosty feculence
+turns: 10
+
+╔════════╦═════╦════════╗
+║xx xx xx║KK ..║xx xx xx║
+║  ╔═════╝     ╚═════╗  ║
+║xx║.. VV .. .. Dh xx║xx║
+║  ║                 ║  ║
+║xx║.. .. .. .. .. ..║xx║
+║  ║                 ║  ║
+║xx║.. .. Dv Dv .. ..║xx║
+║  ║                 ║  ║
+║xx║.. VV xx xx .. ..║xx║
+║  ║                 ║  ║
+║xx║PP .. VV .. .. ..║xx║
+║  ║                 ║  ║
+║xx║.. Dh .. .. .. ..║xx║
+║  ╚═════════════════╝  ║
+║xx xx xx xx xx xx xx xx║
+╚═══════════════════════╝
