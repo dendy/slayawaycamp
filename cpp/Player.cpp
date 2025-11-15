@@ -336,7 +336,7 @@ void Player::_goDude(const Dude dude, const Dir dir, const bool called, Extra & 
 		}
 		if (res.bump == Bump::Phone) {
 			// bumped into a phone, lets call it
-			if (dude.type != Dude::Type::Cat) { // cats cannit call
+			if (dude.type != Dude::Type::Cat) { // cats cannot call
 				if (!called) { // cannot call to myself
 					_call(target, map_.getPhone(res.target), extra);
 				}
@@ -372,17 +372,9 @@ void Player::_kill(const Dude dude, Extra & extra, std::queue<Extra::Scared> & s
 		state_.dudes.erase(it);
 	}
 
-	{
-		std::queue<Extra::Scared> nextScared;
-		while (!scared.empty()) {
-			const Extra::Scared s = scared.front();
-			scared.pop();
-			if (s.dude.pos != dude.pos) {
-				nextScared.push(s);
-			}
-		}
-		std::swap(scared, nextScared);
-	}
+	removeFromQueue<Extra::Scared>(scared, [&dude] (const Extra::Scared & s) -> bool {
+		return s.dude.pos == dude.pos;
+	});
 
 	_scare(dude.pos, extra);
 }
@@ -450,6 +442,9 @@ void Player::_processExtra(Extra & extra) noexcept
 	while (!extra.scared.empty()) {
 		const Extra::Scared scared = extra.scared.front();
 		extra.scared.pop();
+		removeFromQueue<Extra::Called>(extra.called, [&scared] (const Extra::Called & called) {
+			return called.dude.pos == scared.dude.pos;
+		});
 		_goDude(scared.dude, scared.dir, false, nextExtra);
 	}
 

@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
+#include <queue>
 #include <vector>
 #include <string_view>
 
@@ -194,6 +196,23 @@ inline std::string makeLower(const std::string_view & sv) noexcept
 	return s;
 }
 
+
+template <typename T>
+using RemoveFromQueueOp = std::function<bool(const T & item)>;
+
+template <typename T>
+inline void removeFromQueue(std::queue<T> & queue, const RemoveFromQueueOp<T> & op) noexcept
+{
+	std::queue<T> next;
+	while (!queue.empty()) {
+		T item = queue.front();
+		queue.pop();
+		if (!op(item)) {
+			next.push(std::move(item));
+		}
+	}
+	std::swap(queue, next);
+}
 
 
 
