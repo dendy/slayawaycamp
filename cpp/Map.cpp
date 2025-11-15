@@ -646,7 +646,9 @@ void Map::draw(const Map & map)
 
 	if (map.portal.pos != Pos::null()) {
 		if (map.portal.pos != map.state.killer.pos) {
-			setTile(map.portal.pos, kPortal);
+			if (map.state.findDude(map.portal.pos) == map.state.dudes.end()) {
+				setTile(map.portal.pos, kPortal);
+			}
 		}
 	}
 
@@ -661,8 +663,10 @@ void Map::draw(const Map & map)
 						const auto it = map.findTeleport(dude.pos);
 						return it == map.teleports.end() ? nullptr : &*it;
 					}();
+					const bool hasPortal = dude.pos == map.portal.pos;
 					switch (dude.type) {
 					case Dude::Type::Victim:
+						assert(!hasPortal);
 						return hasGum ? kVictimGum : kVictim;
 					case Dude::Type::Cat:
 						assert(!hasGum);
@@ -671,17 +675,22 @@ void Map::draw(const Map & map)
 							tmpTile[1] = colorToString(teleport->color);
 							return tmpTile;
 						} else {
-							return kCat;
+							return hasPortal ? kCatPortal : kCat;
 						}
 					case Dude::Type::Cop:
+						assert(!hasGum);
+						assert(!hasPortal);
 						tmpTile[0] = kCop[0];
 						tmpTile[1] = dirToString(dude.dir);
 						return tmpTile;
 					case Dude::Type::Swat:
+						assert(!hasPortal);
 						tmpTile[0] = hasGum ? kSwatGum[0] : kSwat[0];
 						tmpTile[1] = dirToString(dude.dir);
 						return tmpTile;
 					case Dude::Type::Drop:
+						assert(!hasGum);
+						assert(!hasPortal);
 						tmpTile[0] = kDrop[0];
 						tmpTile[1] = orientationToString(dude.orientation);
 						return tmpTile;
