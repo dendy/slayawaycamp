@@ -34,6 +34,7 @@ static const QString kVictim       = QString::fromUtf8("VV");
 static const QString kVictimGum    = QString::fromUtf8("Vg");
 
 static const QString kCat          = QString::fromUtf8("^^");
+static const QString kCatPortal    = QString::fromUtf8("^P");
 static const QString kMine         = QString::fromUtf8("<>");
 static const QString kGum          = QString::fromUtf8("gg");
 
@@ -371,6 +372,13 @@ Map Map::load(const std::filesystem::path & path)
 					.type = Dude::Type::Cat,
 					.pos = Pos{x, y},
 				});
+			} else if (tile == kCatPortal) {
+				dudes.push_back(Dude {
+					.type = Dude::Type::Cat,
+					.pos = Pos{x, y},
+				});
+				assert(portal.pos == Pos::null());
+				portal.pos = Pos{x, y};
 			} else if (tile == kMine) {
 				mines.push_back(Mine {
 					.pos = Pos{x, y},
