@@ -228,54 +228,65 @@ Map Map::load(const std::filesystem::path & path)
 	printf("Loading: %s\n", path.filename().c_str());
 	fflush(stdout);
 
-	std::string shortName;
-	std::string fullName;
-	std::string moobaaName;
-	int turns = -1;
-
-	int maxLength = 0;
+	Info info;
 	std::vector<QString> lines;
-	std::ifstream file(path);
-	assert(file.good());
-	std::string line;
-	while (std::getline(file, line)) {
-		if (line.empty() || std::string_view(line).substr(0, 1) == "#") {
-			continue;
+
+	{
+		std::ifstream file(path);
+		assert(file.good());
+		std::string line;
+		while (std::getline(file, line)) {
+			if (line.empty() || std::string_view(line).substr(0, 1) == "#") {
+				continue;
+			}
+			if (line.starts_with(kShortNamePrefix)) {
+				assert(info.shortName.empty());
+				info.shortName = line.substr(kShortNamePrefix.size());
+				assert(info.shortName == makeLower(info.shortName));
+				printf("short name: %s\n", info.shortName.c_str());
+				fflush(stdout);
+				continue;
+			}
+			if (line.starts_with(kFullNamePrefix)) {
+				assert(info.fullName.empty());
+				info.fullName = line.substr(kFullNamePrefix.size());
+				assert(info.fullName == makeLower(info.fullName));
+				printf("full name: %s\n", info.fullName.c_str());
+				fflush(stdout);
+				continue;
+			}
+			if (line.starts_with(kMoobaaNamePrefix)) {
+				assert(info.moobaaName.empty());
+				info.moobaaName = line.substr(kMoobaaNamePrefix.size());
+				continue;
+			}
+			if (line.starts_with(kTurnsPrefix)) {
+				assert(info.turns == -1);
+				const std::from_chars_result r = std::from_chars(
+						line.data() + kTurnsPrefix.size(), line.data() + line.size(), info.turns);
+				assert(!std::make_error_condition(r.ec) && info.turns > 0);
+				printf("Level turns: %d\n", info.turns);
+				continue;
+			}
+			const QString qline = QString::fromStdString(line);
+			lines.push_back(std::move(qline));
 		}
-		if (line.starts_with(kShortNamePrefix)) {
-			assert(shortName.empty());
-			shortName = line.substr(kShortNamePrefix.size());
-			assert(shortName == makeLower(shortName));
-			printf("short name: %s\n", shortName.c_str());
-			fflush(stdout);
-			continue;
-		}
-		if (line.starts_with(kFullNamePrefix)) {
-			assert(fullName.empty());
-			fullName = line.substr(kFullNamePrefix.size());
-			assert(fullName == makeLower(fullName));
-			printf("full name: %s\n", fullName.c_str());
-			fflush(stdout);
-			continue;
-		}
-		if (line.starts_with(kMoobaaNamePrefix)) {
-			assert(moobaaName.empty());
-			moobaaName = line.substr(kMoobaaNamePrefix.size());
-			continue;
-		}
-		if (line.starts_with(kTurnsPrefix)) {
-			assert(turns == -1);
-			const std::from_chars_result r = std::from_chars(
-					line.data() + kTurnsPrefix.size(), line.data() + line.size(), turns);
-			assert(!std::make_error_condition(r.ec) && turns > 0);
-			printf("Level turns: %d\n", turns);
-			continue;
-		}
-		const QString qline = QString::fromStdString(line);
-		maxLength = std::max(maxLength, qline.length());
-		lines.push_back(std::move(qline));
 	}
-	assert(maxLength > 3);
+
+	return Map::_create(std::move(info), std::move(lines));
+}
+
+
+Map Map::_create(Info && info, std::vector<QString> && lines)
+{
+	const int maxLength = [&lines] () -> int {
+		int l = 0;
+		for (const QString & line : lines) {
+			l = std::max(l, line.length());
+		}
+		assert(l > 3);
+		return l;
+	}();
 	assert(lines.size() > 2);
 
 	assert((maxLength - 1) % 3 == 0);
@@ -286,7 +297,7 @@ Map Map::load(const std::filesystem::path & path)
 	const int height = (lines.size() - 1) / 2;
 	assert(height <= kMaxMapSize);
 
-	assert(!shortName.empty());
+	assert(!info.shortName.empty());
 
 	for (QString & line : lines) {
 		while (line.length() < maxLength) {
@@ -548,10 +559,7 @@ Map Map::load(const std::filesystem::path & path)
 	std::sort(mines.begin(), mines.end());
 
 	return Map {
-		.shortName = std::move(shortName),
-		.fullName = std::move(fullName),
-		.moobaaName = std::move(moobaaName),
-		.turns = turns,
+		.info = std::move(info),
 		.width = width,
 		.height = height,
 		.hwalls = std::move(hwalls),
@@ -649,18 +657,28 @@ void Map::draw(const Map & map)
 			[&setTile, &map, &tmpTile] (const Dude & dude) {
 				setTile(dude.pos, [&dude, &map, &tmpTile] {
 					const bool hasGum = map.hasGum(dude.pos);
+					const Teleport * const teleport = [&map, &dude] () -> const Teleport * {
+						const auto it = map.findTeleport(dude.pos);
+						return it == map.teleports.end() ? nullptr : &*it;
+					}();
 					switch (dude.type) {
 					case Dude::Type::Victim:
 						return hasGum ? kVictimGum : kVictim;
 					case Dude::Type::Cat:
 						assert(!hasGum);
-						return kCat;
+						if (teleport) {
+							tmpTile[0] = kCat[0];
+							tmpTile[1] = colorToString(teleport->color);
+							return tmpTile;
+						} else {
+							return kCat;
+						}
 					case Dude::Type::Cop:
 						tmpTile[0] = kCop[0];
 						tmpTile[1] = dirToString(dude.dir);
 						return tmpTile;
 					case Dude::Type::Swat:
-						tmpTile[0] = kSwat[0];
+						tmpTile[0] = hasGum ? kSwatGum[0] : kSwat[0];
 						tmpTile[1] = dirToString(dude.dir);
 						return tmpTile;
 					case Dude::Type::Drop:
@@ -697,7 +715,8 @@ void Map::draw(const Map & map)
 			});
 
 	std::for_each(map.teleports.begin(), map.teleports.end(),
-			[&setTile, &tmpTile] (const Teleport & teleport) {
+			[&setTile, &tmpTile, &map] (const Teleport & teleport) {
+				if (map.state.findDude(teleport.pos) != map.state.dudes.end()) return;
 				tmpTile[0] = kTeleport[0];
 				tmpTile[1] = colorToString(teleport.color);
 				setTile(teleport.pos, tmpTile);
@@ -1056,11 +1075,19 @@ void Map::draw(const Map & map)
 		}
 	}
 
+	// compare with the original
+	{
+		Info cinfo = map.info;
+		std::vector<QString> clines = lines;
+		const Map cmap = Map::_create(std::move(cinfo), std::move(clines));
+		assert(map == cmap);
+	}
+
 	// draw to stdout
-	std::for_each(lines.begin(), lines.end(), [&lines] (QString & line) {
+	for (const QString & line : lines) {
 		const QByteArray utf8 = line.toUtf8();
 		printf("%s\n", utf8.data());
-	});
+	}
 }
 
 

@@ -37,7 +37,7 @@ App::App(Args && args) :
 		_execMoobaa();
 	}
 
-	if (!map_.shortName.empty()) {
+	if (!map_.info.shortName.empty()) {
 		Map::draw(map_);
 		_execMap();
 	}
@@ -222,9 +222,9 @@ void App::_execMoobaa() noexcept
 
 			const auto checkName = [&moobaaSerie, &map] () -> bool {
 				const std::string moobaaShortName = makeLower(moobaaSerie.shortName);
-				if (moobaaShortName == map.shortName) return true;
-				if (moobaaShortName == map.fullName) return true;
-				if (moobaaSerie.shortName == map.moobaaName) return true;
+				if (moobaaShortName == map.info.shortName) return true;
+				if (moobaaShortName == map.info.fullName) return true;
+				if (moobaaSerie.shortName == map.info.moobaaName) return true;
 				return false;
 			};
 			if (!checkName()) {

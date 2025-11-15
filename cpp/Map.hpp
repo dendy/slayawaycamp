@@ -8,9 +8,19 @@
 
 
 
+class QString;
+
+
+
+
 struct Phone {
 	Pos pos;
 	Color color;
+
+	bool operator==(const Phone & other) const noexcept
+	{
+		return pos == other.pos && color == other.color;
+	}
 };
 
 
@@ -18,6 +28,11 @@ struct Phone {
 
 struct Portal {
 	Pos pos;
+
+	bool operator==(const Portal & other) const noexcept
+	{
+		return pos == other.pos;
+	}
 };
 
 
@@ -38,7 +53,7 @@ struct Wall {
 
 	bool operator==(const Wall & other) const noexcept
 	{
-		return pos == other.pos;
+		return pos == other.pos && type == other.type && win == other.win;
 	}
 };
 
@@ -47,6 +62,11 @@ struct Wall {
 
 struct Gum {
 	Pos pos;
+
+	bool operator==(const Gum & other) const noexcept
+	{
+		return pos == other.pos;
+	}
 };
 
 
@@ -55,6 +75,11 @@ struct Gum {
 struct Teleport {
 	Pos pos;
 	Color color;
+
+	bool operator==(const Teleport & other) const noexcept
+	{
+		return pos == other.pos && color == other.color;
+	}
 };
 
 
@@ -73,16 +98,18 @@ struct Trap {
 
 
 struct Map {
+	struct Info {
+		std::string shortName;
+		std::string fullName;
+		std::string moobaaName;
+		int turns = -1;
+	};
+
 	static Map load(const std::filesystem::path & path);
 	static void draw(const Map & map);
 
-	std::string shortName;
-	std::string fullName;
-	std::string moobaaName;
-	int turns = -1;
-
+	Info info;
 	int width, height;
-
 	std::vector<Wall> hwalls;
 	std::vector<Wall> vwalls;
 	std::vector<Trap> traps;
@@ -125,9 +152,40 @@ struct Map {
 		return *it;
 	}
 
+	auto findTeleport(const Pos & pos) const noexcept
+	{
+		return std::find_if(teleports.begin(), teleports.end(), [&pos] (const Teleport & teleport) {
+			return teleport.pos == pos;
+		});
+	}
+
 	const Wall * findWall(const Pos & pos, Dir dir) const noexcept;
 	const Wall & getWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasAnyWall(const Pos & pos, Dir dir) const noexcept;
 	bool hasTallWall(const Pos & pos, Dir dir) const noexcept;
 	const Teleport & getOtherTeleport(const Teleport & teleport) const noexcept;
+
+	bool operator==(const Map & other) const noexcept;
+
+private:
+	static Map _create(Info && info, std::vector<QString> && lines);
 };
+
+
+
+
+inline bool Map::operator==(const Map & other) const noexcept
+{
+	// if (info != other.info) return false;
+	if (width != other.width) return false;
+	if (height != other.height) return false;
+	if (hwalls != other.hwalls) return false;
+	if (vwalls != other.vwalls) return false;
+	if (traps != other.traps) return false;
+	if (phones != other.phones) return false;
+	if (gums != other.gums) return false;
+	if (teleports != other.teleports) return false;
+	if (portal != other.portal) return false;
+	if (state != other.state) return false;
+	return true;
+}

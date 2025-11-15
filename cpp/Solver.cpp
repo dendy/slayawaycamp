@@ -29,7 +29,7 @@ Solver::Solver(const Map & map, const SolutionCallback & cb)
 		moveIdsLeft_.pop();
 
 		const int currentDistance = _moveDistance(currentMoveId);
-		const bool isLastTurn = map.turns != -1 && currentDistance == map.turns - 1;
+		const bool isLastTurn = map.info.turns != -1 && currentDistance == map.info.turns - 1;
 
 		for (const Dir dir : kAllDirs) {
 #ifdef ENABLE_DEBUG
