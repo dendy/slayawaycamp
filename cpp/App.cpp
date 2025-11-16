@@ -38,8 +38,12 @@ App::App(Args && args) :
 	}
 
 	if (!map_.info.shortName.empty()) {
-		Map::draw(map_);
+		map_.draw();
 		_execMap();
+	}
+
+	if (args.convert) {
+		_execConvert();
 	}
 }
 
@@ -346,4 +350,15 @@ void App::_execMoobaa() noexcept
 	printf("total  : %d\n", totalSerieCount);
 	printf("better : %d\n", betterSerieCount);
 	printf("solved : %d\n", solvedSerieCount);
+}
+
+
+void App::_execConvert() noexcept
+{
+	for (const std::filesystem::directory_entry & entry :
+			std::filesystem::recursive_directory_iterator(SLAYAWAYCAMP_MOVIES_DIR)) {
+		if (entry.is_regular_file() && entry.path().extension() == kSerieExtension) {
+			const Map map = Map::load(entry.path());
+		}
+	}
 }

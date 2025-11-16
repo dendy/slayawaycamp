@@ -578,35 +578,35 @@ Map Map::_create(Info && info, std::vector<QString> && lines)
 }
 
 
-void Map::draw(const Map & map)
+std::vector<QString> Map::convert() const noexcept
 {
 	std::vector<QString> lines;
-	lines.resize(map.height * 2 + 1);
-	std::for_each(lines.begin(), lines.end(), [&map] (QString & line) {
-		line.resize(map.width * 3 + 1, QChar(' '));
+	lines.resize(height * 2 + 1);
+	std::for_each(lines.begin(), lines.end(), [this] (QString & line) {
+		line.resize(width * 3 + 1, QChar(' '));
 	});
 
-	const auto tile = [&lines, &map] (const Pos & pos) -> QChar * {
-		assert(pos.x >= 0 && pos.x < map.width);
-		assert(pos.y >= 0 && pos.y < map.height);
+	const auto tile = [&lines, this] (const Pos & pos) -> QChar * {
+		assert(pos.x >= 0 && pos.x < width);
+		assert(pos.y >= 0 && pos.y < height);
 		return lines[pos.y * 2 + 1].data() + pos.x * 3 + 1;
 	};
 
-	const auto hwall = [&lines, &map] (const Pos & pos) -> QChar * {
-		assert(pos.x >= 0 && pos.x < map.width);
-		assert(pos.y >= 0 && pos.y < map.height + 1);
+	const auto hwall = [&lines, this] (const Pos & pos) -> QChar * {
+		assert(pos.x >= 0 && pos.x < width);
+		assert(pos.y >= 0 && pos.y < height + 1);
 		return lines[pos.y * 2].data() + pos.x * 3 + 1;
 	};
 
-	const auto vwall = [&lines, &map] (const Pos & pos) -> QChar * {
-		assert(pos.x >= 0 && pos.x < map.width + 1);
-		assert(pos.y >= 0 && pos.y < map.height);
+	const auto vwall = [&lines, this] (const Pos & pos) -> QChar * {
+		assert(pos.x >= 0 && pos.x < width + 1);
+		assert(pos.y >= 0 && pos.y < height);
 		return lines[pos.y * 2 + 1].data() + pos.x * 3;
 	};
 
-	const auto corner = [&lines, &map] (const Pos & pos) -> QChar * {
-		assert(pos.x >= 0 && pos.x < map.width + 1);
-		assert(pos.y >= 0 && pos.y < map.height + 1);
+	const auto corner = [&lines, this] (const Pos & pos) -> QChar * {
+		assert(pos.x >= 0 && pos.x < width + 1);
+		assert(pos.y >= 0 && pos.y < height + 1);
 		return lines[pos.y * 2].data() + pos.x * 3;
 	};
 
@@ -627,27 +627,27 @@ void Map::draw(const Map & map)
 		s[0] = value[0];
 	};
 
-	for (int y = 0; y < map.height; ++y) {
-		for (int x = 0; x < map.width; ++x) {
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
 			setTile(Pos{x, y}, kEmptyTile);
 		}
 	}
 
 	// tiles
-	setTile(map.state.killer.pos, [&map] {
-		if (map.portal.pos == map.state.killer.pos) {
+	setTile(state.killer.pos, [this] {
+		if (portal.pos == state.killer.pos) {
 			return kKillerPortal;
 		}
-		if (map.hasGum(map.state.killer.pos)) {
+		if (hasGum(state.killer.pos)) {
 			return kKillerGum;
 		}
 		return kKiller;
 	}());
 
-	if (map.portal.pos != Pos::null()) {
-		if (map.portal.pos != map.state.killer.pos) {
-			if (map.state.findDude(map.portal.pos) == map.state.dudes.end()) {
-				setTile(map.portal.pos, kPortal);
+	if (portal.pos != Pos::null()) {
+		if (portal.pos != state.killer.pos) {
+			if (state.findDude(portal.pos) == state.dudes.end()) {
+				setTile(portal.pos, kPortal);
 			}
 		}
 	}
@@ -655,15 +655,15 @@ void Map::draw(const Map & map)
 	QString tmpTile;
 	tmpTile.resize(2);
 
-	std::for_each(map.state.dudes.begin(), map.state.dudes.end(),
-			[&setTile, &map, &tmpTile] (const Dude & dude) {
-				setTile(dude.pos, [&dude, &map, &tmpTile] {
-					const bool hasGum = map.hasGum(dude.pos);
-					const Teleport * const teleport = [&map, &dude] () -> const Teleport * {
-						const auto it = map.findTeleport(dude.pos);
-						return it == map.teleports.end() ? nullptr : &*it;
+	std::for_each(state.dudes.begin(), state.dudes.end(),
+			[&setTile, this, &tmpTile] (const Dude & dude) {
+				setTile(dude.pos, [&dude, this, &tmpTile] {
+					const bool hasGum = this->hasGum(dude.pos);
+					const Teleport * const teleport = [this, &dude] () -> const Teleport * {
+						const auto it = findTeleport(dude.pos);
+						return it == teleports.end() ? nullptr : &*it;
 					}();
-					const bool hasPortal = dude.pos == map.portal.pos;
+					const bool hasPortal = dude.pos == portal.pos;
 					switch (dude.type) {
 					case Dude::Type::Victim:
 						assert(!hasPortal);
@@ -699,40 +699,40 @@ void Map::draw(const Map & map)
 				}());
 			});
 
-	std::for_each(map.state.mines.begin(), map.state.mines.end(),
-			[&setTile, &map] (const Mine & mine) {
+	std::for_each(state.mines.begin(), state.mines.end(),
+			[&setTile, this] (const Mine & mine) {
 				setTile(mine.pos, kMine);
 			});
 
-	std::for_each(map.traps.begin(), map.traps.end(),
+	std::for_each(traps.begin(), traps.end(),
 			[&setTile] (const Trap & trap) {
 				setTile(trap.pos, kTraps[0]);
 			});
 
-	std::for_each(map.phones.begin(), map.phones.end(),
+	std::for_each(phones.begin(), phones.end(),
 			[&setTile, &tmpTile] (const Phone & phone) {
 				tmpTile[0] = kPhone[0];
 				tmpTile[1] = colorToString(phone.color);
 				setTile(phone.pos, tmpTile);
 			});
 
-	std::for_each(map.gums.begin(), map.gums.end(),
-			[&setTile, &map] (const Gum & gum) {
-				if (gum.pos == map.state.killer.pos) return;
-				if (map.state.findDude(gum.pos) != map.state.dudes.end()) return;
+	std::for_each(gums.begin(), gums.end(),
+			[&setTile, this] (const Gum & gum) {
+				if (gum.pos == state.killer.pos) return;
+				if (state.findDude(gum.pos) != state.dudes.end()) return;
 				setTile(gum.pos, kGum);
 			});
 
-	std::for_each(map.teleports.begin(), map.teleports.end(),
-			[&setTile, &tmpTile, &map] (const Teleport & teleport) {
-				if (map.state.findDude(teleport.pos) != map.state.dudes.end()) return;
+	std::for_each(teleports.begin(), teleports.end(),
+			[&setTile, &tmpTile, this] (const Teleport & teleport) {
+				if (state.findDude(teleport.pos) != state.dudes.end()) return;
 				tmpTile[0] = kTeleport[0];
 				tmpTile[1] = colorToString(teleport.color);
 				setTile(teleport.pos, tmpTile);
 			});
 
 	// walls
-	std::for_each(map.hwalls.begin(), map.hwalls.end(),
+	std::for_each(hwalls.begin(), hwalls.end(),
 			[&setHorzWall] (const Wall & wall) {
 				setHorzWall(wall.pos, [&wall] {
 					if (wall.win) {
@@ -754,7 +754,7 @@ void Map::draw(const Map & map)
 				}());
 			});
 
-	std::for_each(map.vwalls.begin(), map.vwalls.end(),
+	std::for_each(vwalls.begin(), vwalls.end(),
 			[&setVertWall] (const Wall & wall) {
 				setVertWall(wall.pos, [&wall] {
 					if (wall.win) {
@@ -929,11 +929,11 @@ void Map::draw(const Map & map)
 		return m;
 	}();
 
-	const auto makeCorner = [&map, &cornerForTag] (const Pos & pos) -> QStringView {
-		const Wall * const rwall = map.findWall(pos, Dir::Up);
-		const Wall * const dwall = map.findWall(pos, Dir::Left);
-		const Wall * const lwall = map.findWall(pos + Pos{-1, -1}, Dir::Down);
-		const Wall * const uwall = map.findWall(pos + Pos{-1, -1}, Dir::Right);
+	const auto makeCorner = [this, &cornerForTag] (const Pos & pos) -> QStringView {
+		const Wall * const rwall = findWall(pos, Dir::Up);
+		const Wall * const dwall = findWall(pos, Dir::Left);
+		const Wall * const lwall = findWall(pos + Pos{-1, -1}, Dir::Down);
+		const Wall * const uwall = findWall(pos + Pos{-1, -1}, Dir::Right);
 
 		char cornerTag[4] = {' ', ' ', ' ', ' '};
 
@@ -963,8 +963,8 @@ void Map::draw(const Map & map)
 		return {};
 	};
 
-	for (int y = 0; y <= map.height; ++y) {
-		for (int x = 0; x <= map.width; ++x) {
+	for (int y = 0; y <= height; ++y) {
+		for (int x = 0; x <= width; ++x) {
 			QChar * const s = corner(Pos{x, y});
 			const QStringView c = makeCorner(Pos{x, y});
 			if (!c.empty()) {
@@ -975,47 +975,47 @@ void Map::draw(const Map & map)
 
 	// blocks
 	{
-		const auto hasSomething = [&map] (const Pos & pos) -> bool {
-			if (map.state.killer.pos == pos) return true;
-			for (const Dude & dude : map.state.dudes) {
+		const auto hasSomething = [this] (const Pos & pos) -> bool {
+			if (state.killer.pos == pos) return true;
+			for (const Dude & dude : state.dudes) {
 				if (dude.pos == pos) return true;
 			}
-			for (const Mine & mine : map.state.mines) {
+			for (const Mine & mine : state.mines) {
 				if (mine.pos == pos) return true;
 			}
-			for (const Trap & trap : map.traps) {
+			for (const Trap & trap : traps) {
 				if (trap.pos == pos) return true;
 			}
-			for (const Phone & phone : map.phones) {
+			for (const Phone & phone : phones) {
 				if (phone.pos == pos) return true;
 			}
-			for (const Gum & gum : map.gums) {
+			for (const Gum & gum : gums) {
 				if (gum.pos == pos) return true;
 			}
-			for (const Teleport & teleport : map.teleports) {
+			for (const Teleport & teleport : teleports) {
 				if (teleport.pos == pos) return true;
 			}
-			if (map.portal.pos == pos) return true;
+			if (portal.pos == pos) return true;
 			return false;
 		};
 
 		struct Tile {
 			bool checked = false;
 		};
-		std::vector<Tile> checkedTiles(map.width * map.height);
-		const auto checkedTile = [&checkedTiles, &map] (const Pos & pos) -> bool & {
-			return checkedTiles[pos.y * map.width + pos.x].checked;
+		std::vector<Tile> checkedTiles(width * height);
+		const auto checkedTile = [&checkedTiles, this] (const Pos & pos) -> bool & {
+			return checkedTiles[pos.y * width + pos.x].checked;
 		};
 
-		const auto makeArea = [&checkedTile, &map, &hasSomething, &setTile,
+		const auto makeArea = [&checkedTile, this, &hasSomething, &setTile,
 				&setHorzWall, &setVertWall, &corner] (const Pos & startPos) {
 			bool & checked = checkedTile(startPos);
 			if (checked) return;
 			checked = true;
 
-			std::vector<Tile> area(map.width * map.height);
-			const auto areaTile = [&area, &map] (const Pos & pos) -> bool & {
-				return area[pos.y * map.width + pos.x].checked;
+			std::vector<Tile> area(width * height);
+			const auto areaTile = [&area, this] (const Pos & pos) -> bool & {
+				return area[pos.y * width + pos.x].checked;
 			};
 
 			std::queue<Pos> queue;
@@ -1034,10 +1034,10 @@ void Map::draw(const Map & map)
 
 				for (const Dir & dir : kAllDirs) {
 					const Pos dirPos = p + shiftForDir(dir);
-					if (map.contains(dirPos)) {
+					if (contains(dirPos)) {
 						bool & a = checkedTile(dirPos);
 						if (!a) {
-							if (!map.hasAnyWall(p, dir)) {
+							if (!hasAnyWall(p, dir)) {
 								if (hasSomething(dirPos)) {
 									blocked = false;
 								}
@@ -1050,17 +1050,17 @@ void Map::draw(const Map & map)
 			}
 
 			if (blocked) {
-				for (int y = 0; y < map.height; ++y) {
-					for (int x = 0; x < map.width; ++x) {
+				for (int y = 0; y < height; ++y) {
+					for (int x = 0; x < width; ++x) {
 						const Pos pos = Pos{x, y};
 						if (areaTile(pos)) {
 							setTile(pos, kBlockTile);
 							const Pos downPos = pos + shiftForDir(Dir::Down);
 							const Pos rightPos = pos + shiftForDir(Dir::Right);
 							const Pos downRightPos = downPos + shiftForDir(Dir::Right);
-							const bool hasRight = map.contains(rightPos) && areaTile(rightPos);
-							const bool hasDown = map.contains(downPos) && areaTile(downPos);
-							const bool hasDownRight = map.contains(downRightPos) &&
+							const bool hasRight = contains(rightPos) && areaTile(rightPos);
+							const bool hasDown = contains(downPos) && areaTile(downPos);
+							const bool hasDownRight = contains(downRightPos) &&
 									areaTile(downRightPos) && hasDown && hasRight;
 							if (hasRight) {
 								setVertWall(rightPos, kBlockVertWall);
@@ -1077,25 +1077,82 @@ void Map::draw(const Map & map)
 			}
 		};
 
-		for (int y = 0; y < map.height; ++y) {
-			for (int x = 0; x < map.width; ++x) {
+		for (int y = 0; y < height; ++y) {
+			for (int x = 0; x < width; ++x) {
 				makeArea(Pos{x, y});
 			}
 		}
 	}
 
+	return lines;
 	// compare with the original
-	{
-		Info cinfo = map.info;
-		std::vector<QString> clines = lines;
-		const Map cmap = Map::_create(std::move(cinfo), std::move(clines));
-		assert(map == cmap);
-	}
+	// {
+	// 	Info cinfo = map.info;
+	// 	std::vector<QString> clines = lines;
+	// 	const Map cmap = Map::_create(std::move(cinfo), std::move(clines));
+	// 	assert(map == cmap);
+	// }
 
-	// draw to stdout
+	// // draw to stdout
+	// for (const QString & line : lines) {
+	// 	const QByteArray utf8 = line.toUtf8();
+	// 	printf("%s\n", utf8.data());
+	// }
+}
+
+
+void Map::draw() const noexcept
+{
+	const std::vector<QString> lines = convert();
 	for (const QString & line : lines) {
 		const QByteArray utf8 = line.toUtf8();
 		printf("%s\n", utf8.data());
+	}
+}
+
+
+void Map::save(const std::filesystem::path & path) const noexcept
+{
+	const std::vector<QString> lines = convert();
+
+	std::ofstream file(path);
+	assert(file.good());
+
+	const auto write = [&file] (const std::string_view & s) {
+		file.write(s.data(), s.size());
+	};
+
+	const auto writeTag = [&write] (const std::string_view & key, const std::function<void()> & value) {
+		write(key);
+		write(": ");
+		value();
+		write("\n");
+	};
+
+	const auto writeStringTag = [&writeTag, &write] (const std::string_view & key,
+			const std::string_view & value) {
+		writeTag(key, [&value, &write] {
+			write(value);
+		});
+	};
+
+	writeStringTag("name", info.shortName);
+	if (!info.fullName.empty()) {
+		writeStringTag("full", info.fullName);
+	}
+	if (!info.moobaaName.empty()) {
+		writeStringTag("moba", info.moobaaName);
+	}
+	if (info.turns != -1) {
+		writeTag("turns", [&file, this] {
+			file << info.turns;
+		});
+	}
+
+	for (const QString & line : lines) {
+		const QByteArray utf8 = line.toUtf8();
+		file.write(utf8.data(), utf8.length());
+		write("\n");
 	}
 }
 

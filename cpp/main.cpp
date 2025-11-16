@@ -45,6 +45,12 @@ static App::Args getArgs(const std::string_view & name)
 		};
 	}
 
+	if (name == "convert") {
+		return App::Args {
+			.convert = true,
+		};
+	}
+
 	return App::Args {
 		.mapFilePath = [&name] () -> std::filesystem::path {
 			const std::filesystem::path path = name;

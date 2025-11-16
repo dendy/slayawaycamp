@@ -106,7 +106,10 @@ struct Map {
 	};
 
 	static Map load(const std::filesystem::path & path);
-	static void draw(const Map & map);
+
+	std::vector<QString> convert() const noexcept;
+	void draw() const noexcept;
+	void save(const std::filesystem::path & path) const noexcept;
 
 	Info info;
 	int width, height;
