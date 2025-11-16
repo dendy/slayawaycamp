@@ -359,6 +359,7 @@ void App::_execConvert() noexcept
 			std::filesystem::recursive_directory_iterator(SLAYAWAYCAMP_MOVIES_DIR)) {
 		if (entry.is_regular_file() && entry.path().extension() == kSerieExtension) {
 			const Map map = Map::load(entry.path());
+			map.save(entry.path());
 		}
 	}
 }
