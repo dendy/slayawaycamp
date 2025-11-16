@@ -1149,6 +1149,8 @@ void Map::save(const std::filesystem::path & path) const noexcept
 		});
 	}
 
+	write("\n");
+
 	for (const QString & line : lines) {
 		const QByteArray utf8 = line.toUtf8();
 		file.write(utf8.data(), utf8.length());
