@@ -13,6 +13,7 @@ add_executable(slayawaycamp
 	main.cpp
 	App.cpp
 	Map.cpp
+	Loader.cpp
 	Moobaa.cpp
 	Player.cpp
 	Solver.cpp

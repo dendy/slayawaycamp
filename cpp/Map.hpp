@@ -105,12 +105,6 @@ struct Map {
 		int turns = -1;
 	};
 
-	static Map load(const std::filesystem::path & path);
-
-	std::vector<QString> convert() const noexcept;
-	void draw() const noexcept;
-	void save(const std::filesystem::path & path) const noexcept;
-
 	Info info;
 	int width, height;
 	std::vector<Wall> hwalls;
@@ -169,9 +163,6 @@ struct Map {
 	const Teleport & getOtherTeleport(const Teleport & teleport) const noexcept;
 
 	bool operator==(const Map & other) const noexcept;
-
-private:
-	static Map _create(Info && info, std::vector<QString> && lines);
 };
 
 

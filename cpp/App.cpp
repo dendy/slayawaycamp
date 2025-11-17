@@ -21,9 +21,9 @@ App::App(Args && args) :
 			return {};
 		}
 	}()),
-	map_([&args] () -> Map {
+	map_([&args, this] () -> Map {
 		if (!args.mapFilePath.empty()) {
-			return Map::load(args.mapFilePath);
+			return loader_.load(args.mapFilePath);
 		} else {
 			return {};
 		}
@@ -38,7 +38,7 @@ App::App(Args && args) :
 	}
 
 	if (!map_.info.shortName.empty()) {
-		map_.draw();
+		loader_.draw(map_);
 		_execMap();
 	}
 
@@ -211,7 +211,7 @@ void App::_execMoobaa() noexcept
 			printf("moobaa:         moobaa name: %s (%s)\n",
 					moobaaSerie.shortName.c_str(), moobaaSerie.fullName.c_str());
 
-			const Map map = Map::load(seriesPath / serie.filename);
+			const Map map = loader_.load(seriesPath / serie.filename);
 
 			serie.bestSteps = [&map] () -> Steps {
 				Solver::Solution best;
@@ -358,8 +358,8 @@ void App::_execConvert() noexcept
 	for (const std::filesystem::directory_entry & entry :
 			std::filesystem::recursive_directory_iterator(SLAYAWAYCAMP_MOVIES_DIR)) {
 		if (entry.is_regular_file() && entry.path().extension() == kSerieExtension) {
-			const Map map = Map::load(entry.path());
-			map.save(entry.path());
+			const Map map = loader_.load(entry.path());
+			loader_.save(entry.path(), map);
 		}
 	}
 }
