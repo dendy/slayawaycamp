@@ -2,6 +2,7 @@
 #pragma once
 
 #include <filesystem>
+#include <unordered_map>
 
 #include <QString>
 
@@ -20,5 +21,13 @@ public:
 	void save(const std::filesystem::path & path, const Map & map) const noexcept;
 
 private:
-	static Map _create(Map::Info && info, std::vector<QString> && lines) noexcept;
+	struct CornerForTag {
+		std::vector<char> tags;
+		std::unordered_map<std::string_view, QStringView> map;
+	};
+
+	static CornerForTag _createCornerForTag() noexcept;
+	static Map _createMap(Map::Info && info, std::vector<QString> && lines) noexcept;
+
+	const CornerForTag cornerForTag_ = _createCornerForTag();
 };

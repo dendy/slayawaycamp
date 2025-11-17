@@ -3,6 +3,7 @@
 
 #include <array>
 #include <charconv>
+#include <cstring>
 #include <fstream>
 #include <map>
 #include <queue>
@@ -13,6 +14,90 @@
 static constexpr int kMaxMapSize = 16;
 
 
+
+
+static const QChar uqchar(const char * s) noexcept
+{
+	const QString qs = QString::fromUtf8(s);
+	assert(qs.length() == 1);
+	return qs[0];
+}
+
+
+
+
+struct BoxProfile {
+	bool hasSingle;
+	QChar h, v;
+};
+
+static const BoxProfile kLightBoxProfile {
+	.hasSingle = true,
+	.h = uqchar("─"),
+	.v = uqchar("│"),
+};
+
+static const BoxProfile kHeavyBoxProfile {
+	.hasSingle = true,
+	.h = uqchar("━"),
+	.v = uqchar("┃"),
+};
+
+static const BoxProfile kDoubleBoxProfile {
+	.hasSingle= false,
+	.h = uqchar("═"),
+	.v = uqchar("║"),
+};
+
+
+
+
+static constexpr std::string_view kBoxSymbols[] = {
+
+"   " " │ " "   " "   " " │ " " │ " " │ " " │ " "   " " │ " " │ " "   " "   " " │ " "   ",
+"───" " │ " " ┌─" "─┐ " " └─" "─┘ " " ├─" "─┤ " "─┬─" "─┴─" "─┼─" "─╴ " " ╶─" " ╵ " " ╷ ",
+"   " " │ " " │ " " │ " "   " "   " " │ " " │ " " │ " "   " " │ " "   " "   " "   " " │ ",
+
+"   " " ┃ " "   " "   " " ┃ " " ┃ " " ┃ " " ┃ " "   " " ┃ " " ┃ " "   " "   " " ┃ " "   ",
+"━━━" " ┃ " " ┏━" "━┓ " " ┗━" "━┛ " " ┣━" "━┫ " "━┳━" "━┻━" "━╋━" "━╸ " " ╺━" " ╹ " " ╻ ",
+"   " " ┃ " " ┃ " " ┃ " "   " "   " " ┃ " " ┃ " " ┃ " "   " " ┃ " "   " "   " "   " " ┃ ",
+
+"   " "   " " │ " " ┃ ",
+"─╼━" "━╾─" " ╽ " " ╿ ",
+"   " "   " " ┃ " " │ ",
+
+" ┃ " " ┃ " " │ " " ┃ " " ┃ " " ┃ " " │ " " │ " " │ " " │ " " ┃ " " │ ",
+"─╊━" "━╉─" "━╈━" "━╇━" "━╃─" "─╄━" "─╆━" "━╅─" "━┽─" "─┾━" "─╀─" "─╁─",
+" ┃ " " ┃ " " ┃ " " │ " " │ " " │ " " ┃ " " ┃ " " │ " " │ " " │ " " ┃ ",
+
+"   " "   " " ┃ " " ┃ " " ┃ " " ┃ " "   " " ┃ " " ┃ ",
+" ┎─" "─┒ " " ┖─" "─┚ " " ┠─" "─┨ " "─┰─" "─┸─" "─╂─",
+" ┃ " " ┃ " "   " "   " " ┃ " " ┃ " " ┃ " "   " " ┃ ",
+
+"   " "   " " │ " " │ " " │ " " │ " "   " " │ " " │ ",
+" ┍━" "━┑ " " ┕━" "━┙ " " ┝━" "━┥ " "━┯━" "━┷━" "━┿━",
+" │ " " │ " "   " "   " " │ " " │ " " │ " "   " " │ ",
+
+" ┃ " " ┃ " " │ " " │ " "   " "   " " │ " " │ ",
+" ┞─" "─┦ " " ┟─" "─┧ " "━┭─" "─┮━" "━┵─" "─┶━",
+" │ " " │ " " ┃ " " ┃ " " │ " " │ " "   " "   ",
+
+" │ " " │ " " ┃ " " ┃ " "   " "   " " ┃ " " ┃ ",
+" ┢━" "━┪ " " ┡━" "━┩ " "━┱─" "─┲━" "━┹─" "─┺━",
+" ┃ " " ┃ " " │ " " │ " " ┃ " " ┃ " "   " "   ",
+
+"   " " ║ " "   " "   " " ║ " " ║ " " ║ " " ║ " "   " " ║ " " ║ ",
+"═══" " ║ " " ╔═" "═╗ " " ╚═" "═╝ " " ╠═" "═╣ " "═╦═" "═╩═" "═╬═",
+"   " " ║ " " ║ " " ║ " "   " "   " " ║ " " ║ " " ║ " "   " " ║ ",
+
+"   " "   " " ║ " " ║ " " ║ " " ║ " "   " " ║ " " ║ ",
+" ╓─" "─╖ " " ╙─" "─╜ " " ╟─" "─╢ " "─╥─" "─╨─" "─╫─",
+" ║ " " ║ " "   " "   " " ║ " " ║ " " ║ " "   " " ║ ",
+
+"   " "   " " │ " " │ " " │ " " │ " "   " " │ " " │ ",
+" ╒═" "═╕ " " ╘═" "═╛ " " ╞═" "═╡ " "═╤═" "═╧═" "═╪═",
+" │ " " │ " "   " "   " " │ " " │ " " │ " "   " " │ ",
+};
 
 
 static const QString kEmptyTile    = QString::fromUtf8("..");
@@ -76,6 +161,110 @@ static const QString kHorzSwitchWall = QString::fromUtf8(">>");
 static const QString kVertSwitchWall = QString::fromUtf8(">");
 static const QString kHorzZapWall    = QString::fromUtf8("zz");
 static const QString kVertZapWall    = QString::fromUtf8("z");
+
+struct CornerBoxSolid {
+	QChar leftRight;
+	QChar upDown;
+	QChar leftRightDown;
+	QChar leftRightUp;
+	QChar upDownLeft;
+	QChar upDownRight;
+	QChar cross;
+	QChar downLeft;
+	QChar downRight;
+	QChar upLeft;
+	QChar upRight;
+	QChar left;
+	QChar right;
+	QChar up;
+	QChar down;
+};
+
+struct CornerBoxShift {
+	QChar leftRightToDown;
+	QChar leftRightToUp;
+	QChar upDownToLeft;
+	QChar upDownToRight;
+	QChar upDownToCross;
+	QChar downToLeft;
+	QChar downToRight;
+	QChar upToLeft;
+	QChar upToRight;
+};
+
+static CornerBoxSolid kDoubleCornerBoxSolid {
+	.leftRight     = uqchar("═"),
+	.upDown        = uqchar("║"),
+	.leftRightDown = uqchar("╦"),
+	.leftRightUp   = uqchar("╩"),
+	.upDownLeft    = uqchar("╣"),
+	.upDownRight   = uqchar("╠"),
+	.cross         = uqchar("╬"),
+	.downLeft      = uqchar("╗"),
+	.downRight     = uqchar("╔"),
+	.upLeft        = uqchar("╝"),
+	.upRight       = uqchar("╚"),
+};
+
+static CornerBoxSolid kLightCornerBoxSolid {
+	.leftRight     = uqchar("─"),
+	.upDown        = uqchar("│"),
+	.leftRightDown = uqchar("┬"),
+	.leftRightUp   = uqchar("┴"),
+	.upDownLeft    = uqchar("┤"),
+	.upDownRight   = uqchar("├"),
+	.cross         = uqchar("┼"),
+	.downLeft      = uqchar("┐"),
+	.downRight     = uqchar("┌"),
+	.upLeft        = uqchar("┘"),
+	.upRight       = uqchar("└"),
+	.left          = uqchar("╴"),
+	.right         = uqchar("╶"),
+	.up            = uqchar("╵"),
+	.down          = uqchar("╷"),
+};
+
+static CornerBoxSolid kHeavyCornerBoxSolid {
+	.leftRight     = uqchar("─"),
+	.upDown        = uqchar("│"),
+	.leftRightDown = uqchar("┬"),
+	.leftRightUp   = uqchar("┴"),
+	.upDownLeft    = uqchar("┤"),
+	.upDownRight   = uqchar("├"),
+	.cross         = uqchar("┼"),
+	.downLeft      = uqchar("┐"),
+	.downRight     = uqchar("┌"),
+	.upLeft        = uqchar("┘"),
+	.upRight       = uqchar("└"),
+	.left          = uqchar("╴"),
+	.right         = uqchar("╶"),
+	.up            = uqchar("╵"),
+	.down          = uqchar("╷"),
+};
+
+static CornerBoxShift kDoubleToLightBoxShift {
+	.leftRightToDown = uqchar("╤"),
+	.leftRightToUp =   uqchar("╧"),
+	.upDownToLeft    = uqchar("╢"),
+	.upDownToRight   = uqchar("╟"),
+	.upDownToCross   = uqchar("╫"),
+	.downToLeft      = uqchar("╖"),
+	.downToRight     = uqchar("╓"),
+	.upToLeft        = uqchar("╜"),
+	.upToRight       = uqchar("╙"),
+};
+
+static CornerBoxShift kLightToDoubleBoxShift {
+	.leftRightToDown = uqchar("╥"),
+	.leftRightToUp =   uqchar("╨"),
+	.upDownToLeft    = uqchar("╡"),
+	.upDownToRight   = uqchar("╞"),
+	.upDownToCross   = uqchar("╪"),
+	.downToLeft      = uqchar("╕"),
+	.downToRight     = uqchar("╒"),
+	.upToLeft        = uqchar("╛"),
+	.upToRight       = uqchar("╘"),
+};
 
 static const QString kCornerNormalLeftRight     = QString::fromUtf8("═");
 static const QString kCornerNormalUpDown        = QString::fromUtf8("║");
@@ -196,72 +385,163 @@ static QChar colorToString(const Color & color) noexcept
 
 
 
-
 Loader::Loader()
 {
-}
+	static constexpr int kLineCount = std::extent_v<decltype(kBoxSymbols)>;
+	static_assert((kLineCount % 3) == 0);
 
+	static constexpr int kRowCount = kLineCount / 3;
 
-Map Loader::load(const std::filesystem::path & path) const noexcept
-{
-	static constexpr std::string_view kShortNamePrefix = "name: ";
-	static constexpr std::string_view kFullNamePrefix = "full: ";
-	static constexpr std::string_view kMoobaaNamePrefix = "moba: ";
-	static constexpr std::string_view kTurnsPrefix = "turns: ";
+	struct Row {
+		int count;
+		QString lines[3];
+	};
 
-	printf("Loading: %s\n", path.filename().c_str());
-	fflush(stdout);
+	const auto rows = [] () -> std::array<Row, kRowCount> {
+		std::array<Row, kRowCount> rows;
+		for (int ri = 0; ri < kRowCount; ++ri) {
+			Row & row = rows[ri];
+			for (int i = 0; i < 3; ++i) {
+				const std::string_view & line = kBoxSymbols[ri * 3 + i];
+				const QString qline = QString::fromUtf8(line.data(), line.size());
+				assert((qline.length() % 3) == 0);
+				if (i == 0) {
+					row.count = qline.length() / 3;
+				} else {
+					assert(qline.length() / 3 == row.count);
+				}
+				row.lines[i] = qline;
+			}
+		}
+		return rows;
+	}();
 
-	Map::Info info;
-	std::vector<QString> lines;
+	// const int count = [&rows] () -> int {
+	// 	int count = 0;
+	// 	for (int ri = 0; ri < kRowCount; ++ri) {
+	// 		count += rows[ri].count;
+	// 	}
+	// 	return count;
+	// }();
 
-	{
-		std::ifstream file(path);
-		assert(file.good());
-		std::string line;
-		while (std::getline(file, line)) {
-			if (line.empty() || std::string_view(line).substr(0, 1) == "#") {
-				continue;
-			}
-			if (line.starts_with(kShortNamePrefix)) {
-				assert(info.shortName.empty());
-				info.shortName = line.substr(kShortNamePrefix.size());
-				assert(info.shortName == makeLower(info.shortName));
-				printf("short name: %s\n", info.shortName.c_str());
-				fflush(stdout);
-				continue;
-			}
-			if (line.starts_with(kFullNamePrefix)) {
-				assert(info.fullName.empty());
-				info.fullName = line.substr(kFullNamePrefix.size());
-				assert(info.fullName == makeLower(info.fullName));
-				printf("full name: %s\n", info.fullName.c_str());
-				fflush(stdout);
-				continue;
-			}
-			if (line.starts_with(kMoobaaNamePrefix)) {
-				assert(info.moobaaName.empty());
-				info.moobaaName = line.substr(kMoobaaNamePrefix.size());
-				continue;
-			}
-			if (line.starts_with(kTurnsPrefix)) {
-				assert(info.turns == -1);
-				const std::from_chars_result r = std::from_chars(
-						line.data() + kTurnsPrefix.size(), line.data() + line.size(), info.turns);
-				assert(!std::make_error_condition(r.ec) && info.turns > 0);
-				printf("Level turns: %d\n", info.turns);
-				continue;
-			}
-			const QString qline = QString::fromStdString(line);
-			lines.push_back(std::move(qline));
+	// std::vector<QChar> keys;
+	// keys.resize(count * 4);
+
+	std::unordered_map<uint64_t, QChar> valueForKey;
+
+	const auto keyForChars = [] (const QChar l, const QChar r, const QChar u,
+			const QChar d) -> uint64_t {
+		uint64_t key;
+		const auto k = [&key] (const Dir dir, const QChar ch) {
+			assert(!ch.isNull());
+			reinterpret_cast<char16_t*>(&key)[int(dir)] = ch.unicode();
+		};
+		k(Dir::Left,  l);
+		k(Dir::Right, r);
+		k(Dir::Up,    u);
+		k(Dir::Down,  d);
+		return key;
+	};
+
+	int index = 0;
+	for (int ri = 0; ri < kRowCount; ++ri) {
+		const Row & row = rows[ri];
+		for (int i = 0; i < row.count; ++i) {
+			const uint64_t key = keyForChars(
+				row.lines[1][i * 3 + 0],
+				row.lines[1][i * 3 + 2],
+				row.lines[0][i * 3 + 1],
+				row.lines[2][i * 3 + 1]
+			);
+			const QChar value = row.lines[1][i * 3 + 1];
+			assert(!value.isNull());
+			assert(value != ' ');
+			const auto p = valueForKey.insert({key, value});
+			assert(p.second);
+			index++;
 		}
 	}
 
-	return _create(std::move(info), std::move(lines));
+	const auto charForDir = [] (const BoxProfile & profile, const Dir dir) {
+		switch (dir) {
+		case Dir::Left:
+		case Dir::Right:
+			return profile.h;
+		case Dir::Up:
+		case Dir::Down:
+			return profile.v;
+		}
+		assert(false);
+	};
+
+	for (const BoxProfile & profile : {kLightBoxProfile, kHeavyBoxProfile, kDoubleBoxProfile}) {
+		for (int i = 0; i < 16; ++i) {
+			QChar chars[4] = {' ', ' ', ' ', ' '};
+			for (const Dir dir : kAllDirs) {
+				if (i & (1 << int(dir))) {
+					chars[int(dir)] = charForDir(profile, dir);
+				}
+			}
+			const uint64_t key = keyForChars(chars[0], chars[1], chars[2], chars[3]);
+			const auto it = valueForKey.find(key);
+			if (i == 0) {
+				assert(it == valueForKey.end());
+			} else {
+				assert(!profile.hasSingle || it != valueForKey.end());
+			}
+		}
+	}
 }
 
 
-Map Loader::_create(Map::Info && info, std::vector<QString> && lines) noexcept
+Loader::CornerForTag Loader::_createCornerForTag() noexcept
+{
+	std::unordered_map<std::string_view, QStringView> map;
+
+	const auto list = [] (const std::function<void(const std::string_view & tag,
+			const QStringView & s)> & m) {
+		// lrud all normal
+		m("nn  ", kCornerNormalLeftRight);
+		m("  nn", kCornerNormalUpDown);
+		m("n n ", kCornerNormalUpLeft);
+		m("n  n", kCornerNormalDownLeft);
+		m(" nn ", kCornerNormalUpRight);
+		m(" n n", kCornerNormalDownRight);
+		m("nnn ", kCornerNormalLeftRightUp);
+		m("nn n", kCornerNormalLeftRightDown);
+		m("n nn", kCornerNormalUpDownLeft);
+		m(" nnn", kCornerNormalUpDownRight);
+		m("nnnn", kCornerNormalCross);
+	};
+
+	const int count = [&list] () -> int {
+		int count = 0;
+		list([&count] (const std::string_view &, const QStringView &) {
+			count++;
+		});
+		return count;
+	}();
+
+	std::vector<char> tags;
+	tags.resize(count * 4);
+
+	{
+		int index = 0;
+		list([&index, &tags, &map] (const std::string_view & tag, const QStringView & value) {
+			char * const key = tags.data() + index * 4;
+			std::memcpy(key, tag.data(), 4 * sizeof(char));
+			map[std::string_view(key, 4)] = value;
+		});
+	}
+
+	return CornerForTag {
+		.tags = std::move(tags),
+		.map = std::move(map),
+	};
+}
+
+
+Map Loader::_createMap(Map::Info && info, std::vector<QString> && lines) noexcept
 {
 	const int maxLength = [&lines] () -> int {
 		int l = 0;
@@ -562,6 +842,65 @@ Map Loader::_create(Map::Info && info, std::vector<QString> && lines) noexcept
 }
 
 
+Map Loader::load(const std::filesystem::path & path) const noexcept
+{
+	static constexpr std::string_view kShortNamePrefix = "name: ";
+	static constexpr std::string_view kFullNamePrefix = "full: ";
+	static constexpr std::string_view kMoobaaNamePrefix = "moba: ";
+	static constexpr std::string_view kTurnsPrefix = "turns: ";
+
+	printf("Loading: %s\n", path.filename().c_str());
+	fflush(stdout);
+
+	Map::Info info;
+	std::vector<QString> lines;
+
+	{
+		std::ifstream file(path);
+		assert(file.good());
+		std::string line;
+		while (std::getline(file, line)) {
+			if (line.empty() || std::string_view(line).substr(0, 1) == "#") {
+				continue;
+			}
+			if (line.starts_with(kShortNamePrefix)) {
+				assert(info.shortName.empty());
+				info.shortName = line.substr(kShortNamePrefix.size());
+				assert(info.shortName == makeLower(info.shortName));
+				printf("short name: %s\n", info.shortName.c_str());
+				fflush(stdout);
+				continue;
+			}
+			if (line.starts_with(kFullNamePrefix)) {
+				assert(info.fullName.empty());
+				info.fullName = line.substr(kFullNamePrefix.size());
+				assert(info.fullName == makeLower(info.fullName));
+				printf("full name: %s\n", info.fullName.c_str());
+				fflush(stdout);
+				continue;
+			}
+			if (line.starts_with(kMoobaaNamePrefix)) {
+				assert(info.moobaaName.empty());
+				info.moobaaName = line.substr(kMoobaaNamePrefix.size());
+				continue;
+			}
+			if (line.starts_with(kTurnsPrefix)) {
+				assert(info.turns == -1);
+				const std::from_chars_result r = std::from_chars(
+						line.data() + kTurnsPrefix.size(), line.data() + line.size(), info.turns);
+				assert(!std::make_error_condition(r.ec) && info.turns > 0);
+				printf("Level turns: %d\n", info.turns);
+				continue;
+			}
+			const QString qline = QString::fromStdString(line);
+			lines.push_back(std::move(qline));
+		}
+	}
+
+	return _createMap(std::move(info), std::move(lines));
+}
+
+
 std::vector<QString> Loader::convert(const Map & map) const noexcept
 {
 	std::vector<QString> lines;
@@ -756,22 +1095,6 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 	const auto cornerForTag = [] () -> std::map<std::string_view, QStringView> {
 		std::map<std::string_view, QStringView> m;
 
-		// const auto list = [] (const std::function<void(const std::string_view & tag,
-		// 		const QStringView & s)> & m) {
-		// 	// lrud all normal
-		// 	m("nn  ", kCornerNormalLeftRight);
-		// 	m("  nn", kCornerNormalUpDown);
-		// 	m("n n ", kCornerNormalUpLeft);
-		// 	m("n  n", kCornerNormalDownLeft);
-		// 	m[" nn "] = kCornerNormalUpRight;
-		// 	m[" n n"] = kCornerNormalDownRight;
-		// 	m["nnn "] = kCornerNormalLeftRightUp;
-		// 	m["nn n"] = kCornerNormalLeftRightDown;
-		// 	m["n nn"] = kCornerNormalUpDownLeft;
-		// 	m[" nnn"] = kCornerNormalUpDownRight;
-		// 	m["nnnn"] = kCornerNormalCross;
-		// };
-
 		// lrud all normal
 		m["nn  "] = kCornerNormalLeftRight;
 		m["  nn"] = kCornerNormalUpDown;
@@ -921,7 +1244,41 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 		return m;
 	}();
 
-	const auto makeCorner = [&map, &cornerForTag] (const Pos & pos) -> QStringView {
+	// const auto makeCorner = [&map, &cornerForTag] (const Pos & pos) -> QStringView {
+	// 	const Wall * const rwall = map.findWall(pos, Dir::Up);
+	// 	const Wall * const dwall = map.findWall(pos, Dir::Left);
+	// 	const Wall * const lwall = map.findWall(pos + Pos{-1, -1}, Dir::Down);
+	// 	const Wall * const uwall = map.findWall(pos + Pos{-1, -1}, Dir::Right);
+
+	// 	char cornerTag[4] = {' ', ' ', ' ', ' '};
+
+	// 	const auto tag = [&cornerTag] (const Wall * const wall, const Dir dir) {
+	// 		if (wall) {
+	// 			char & c= cornerTag[int(dir)];
+	// 			if (wall->type == Wall::Type::Normal) {
+	// 				c = 'n';
+	// 			} else if (wall->type == Wall::Type::Short) {
+	// 				c = 's';
+	// 			} else if (wall->type == Wall::Type::Zap) {
+	// 				c = 'z';
+	// 			}
+	// 		}
+	// 	};
+
+	// 	tag(lwall, Dir::Left);
+	// 	tag(rwall, Dir::Right);
+	// 	tag(uwall, Dir::Up);
+	// 	tag(dwall, Dir::Down);
+
+	// 	const auto it = cornerForTag.find(std::string_view(cornerTag,
+	// 			std::extent_v<decltype(cornerTag)>));
+	// 	if (it != cornerForTag.end()) {
+	// 		return it->second;
+	// 	}
+	// 	return {};
+	// };
+
+	const auto makeCorner = [&map, this] (const Pos & pos) -> QStringView {
 		const Wall * const rwall = map.findWall(pos, Dir::Up);
 		const Wall * const dwall = map.findWall(pos, Dir::Left);
 		const Wall * const lwall = map.findWall(pos + Pos{-1, -1}, Dir::Down);
@@ -947,9 +1304,9 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 		tag(uwall, Dir::Up);
 		tag(dwall, Dir::Down);
 
-		const auto it = cornerForTag.find(std::string_view(cornerTag,
+		const auto it = cornerForTag_.map.find(std::string_view(cornerTag,
 				std::extent_v<decltype(cornerTag)>));
-		if (it != cornerForTag.end()) {
+		if (it != cornerForTag_.map.end()) {
 			return it->second;
 		}
 		return {};
