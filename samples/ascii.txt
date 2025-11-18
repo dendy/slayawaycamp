@@ -35,5 +35,7 @@ LIGHT to HEAVY
 
 
 MISC
-⚡︎
+utf32: ⚡︎
+utf16: ⚡
+BLOCKS
 █  ▒  ░

@@ -92,6 +92,10 @@ static constexpr std::string_view kBoxSymbols[] = {
 "   " "   " " │ " " │ " " │ " " │ " "   " " │ " " │ ",
 " ╒═" "═╕ " " ╘═" "═╛ " " ╞═" "═╡ " "═╤═" "═╧═" "═╪═",
 " │ " " │ " "   " "   " " │ " " │ " " │ " "   " " │ ",
+
+"   " " z ",
+"zzz" " z ",
+"   " " z ",
 };
 
 
@@ -147,12 +151,14 @@ static const std::array<QString, 2> kVertShortWalls = {
 	QString::fromUtf8("|"),
 };
 
+static const QChar kZapCorner = uqchar("⚡");
+
 static const std::array<QString, 2> kHorzZapWalls = {
-	QString::fromUtf8("⚡︎⚡︎"),
+	QString::fromUtf8("⚡⚡"),
 	QString::fromUtf8("zz"),
 };
 static const std::array<QString, 2> kVertZapWalls = {
-	QString::fromUtf8("⚡︎"),
+	QString::fromUtf8("⚡"),
 	QString::fromUtf8("z"),
 };
 
@@ -1072,16 +1078,8 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 				return kHorzSwitchWall;
 			case Wall::Type::Short:
 				return kHorzShortWalls[0];
-			case Wall::Type::Zap: {
-				QString zs = QString::fromUtf8("⚡︎");
-				// QString zs = QString::fromUtf8("⚡");
-				// QString zs = QString::fromUtf8("⌁");
-				// QString zs = QString::fromUtf8("z");
-				int zsl = zs.length();
-				QStringView zz = kVertZapWalls[0];
-				int zzl = zz.length();
+			case Wall::Type::Zap:
 				return kHorzZapWalls[0];
-			}
 			}
 			assert(false);
 		}());
@@ -1355,12 +1353,22 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 		t(uwall, Dir::Up);
 		t(dwall, Dir::Down);
 
-		const uint64_t key = _keyForTag(tag);
-
-		const auto it = cornerForTag_.corners.find(key);
+		auto it = cornerForTag_.corners.find(_keyForTag(tag));
 		if (it != cornerForTag_.corners.end()) {
 			return it->second;
 		}
+
+		// try to replace zap with short wall
+		for (const Dir dir : kAllDirs) {
+			if (tag[int(dir)] == 'z') {
+				tag[int(dir)] = _profileCharForDir(shortWallBoxProfile_, dir);
+			}
+		}
+		it = cornerForTag_.corners.find(_keyForTag(tag));
+		if (it != cornerForTag_.corners.end()) {
+			return it->second;
+		}
+
 		return {};
 	};
 
@@ -1369,9 +1377,13 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 			QChar * const s = corner(Pos{x, y});
 			const QChar c = makeCorner(Pos{x, y});
 			if (!c.isNull()) {
-				*s = c;
+				if (c == 'z') {
+					*s = kZapCorner;
+				} else {
+					*s = c;
+				}
 			} else {
-				*s = '$';
+				// *s = '$';
 			}
 		}
 	}
