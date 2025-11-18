@@ -26,24 +26,19 @@ static const QChar uqchar(const char * s) noexcept
 
 
 
-struct BoxProfile {
-	bool hasSingle;
-	QChar h, v;
-};
-
-static const BoxProfile kLightBoxProfile {
+const Loader::BoxProfile Loader::kLightBoxProfile {
 	.hasSingle = true,
 	.h = uqchar("─"),
 	.v = uqchar("│"),
 };
 
-static const BoxProfile kHeavyBoxProfile {
+const Loader::BoxProfile Loader::kHeavyBoxProfile {
 	.hasSingle = true,
 	.h = uqchar("━"),
 	.v = uqchar("┃"),
 };
 
-static const BoxProfile kDoubleBoxProfile {
+const Loader::BoxProfile Loader::kDoubleBoxProfile {
 	.hasSingle= false,
 	.h = uqchar("═"),
 	.v = uqchar("║"),
@@ -131,16 +126,15 @@ static const std::array<QString, 2> kTraps = {
 static const QString kBlockHorzWall = QString::fromUtf8("░░");
 static const QString kBlockVertWall = QString::fromUtf8("░");
 
-static const QString kHorzDefaultWall = QString::fromUtf8("══");
-static const QString kVertDefaultWall = QString::fromUtf8("║");
-
-static const std::array<QString, 2> kHorzWalls = {
-	kHorzDefaultWall,
+static const std::array<QString, 3> kHorzWalls = {
+	QString::fromUtf8("━━"),
+	QString::fromUtf8("══"),
 	QString::fromUtf8("=="),
 };
 
-static const std::array<QString, 2> kVertWalls = {
-	kVertDefaultWall,
+static const std::array<QString, 3> kVertWalls = {
+	QString::fromUtf8("┃"),
+	QString::fromUtf8("║"),
 	QString::fromUtf8("I"),
 };
 
@@ -385,117 +379,42 @@ static QChar colorToString(const Color & color) noexcept
 
 
 
-Loader::Loader()
+
+QChar Loader::_profileCharForDir(const Loader::BoxProfile & profile, const Dir dir) noexcept
 {
-	static constexpr int kLineCount = std::extent_v<decltype(kBoxSymbols)>;
-	static_assert((kLineCount % 3) == 0);
-
-	static constexpr int kRowCount = kLineCount / 3;
-
-	struct Row {
-		int count;
-		QString lines[3];
-	};
-
-	const auto rows = [] () -> std::array<Row, kRowCount> {
-		std::array<Row, kRowCount> rows;
-		for (int ri = 0; ri < kRowCount; ++ri) {
-			Row & row = rows[ri];
-			for (int i = 0; i < 3; ++i) {
-				const std::string_view & line = kBoxSymbols[ri * 3 + i];
-				const QString qline = QString::fromUtf8(line.data(), line.size());
-				assert((qline.length() % 3) == 0);
-				if (i == 0) {
-					row.count = qline.length() / 3;
-				} else {
-					assert(qline.length() / 3 == row.count);
-				}
-				row.lines[i] = qline;
-			}
-		}
-		return rows;
-	}();
-
-	// const int count = [&rows] () -> int {
-	// 	int count = 0;
-	// 	for (int ri = 0; ri < kRowCount; ++ri) {
-	// 		count += rows[ri].count;
-	// 	}
-	// 	return count;
-	// }();
-
-	// std::vector<QChar> keys;
-	// keys.resize(count * 4);
-
-	std::unordered_map<uint64_t, QChar> valueForKey;
-
-	const auto keyForChars = [] (const QChar l, const QChar r, const QChar u,
-			const QChar d) -> uint64_t {
-		uint64_t key;
-		const auto k = [&key] (const Dir dir, const QChar ch) {
-			assert(!ch.isNull());
-			reinterpret_cast<char16_t*>(&key)[int(dir)] = ch.unicode();
-		};
-		k(Dir::Left,  l);
-		k(Dir::Right, r);
-		k(Dir::Up,    u);
-		k(Dir::Down,  d);
-		return key;
-	};
-
-	int index = 0;
-	for (int ri = 0; ri < kRowCount; ++ri) {
-		const Row & row = rows[ri];
-		for (int i = 0; i < row.count; ++i) {
-			const uint64_t key = keyForChars(
-				row.lines[1][i * 3 + 0],
-				row.lines[1][i * 3 + 2],
-				row.lines[0][i * 3 + 1],
-				row.lines[2][i * 3 + 1]
-			);
-			const QChar value = row.lines[1][i * 3 + 1];
-			assert(!value.isNull());
-			assert(value != ' ');
-			const auto p = valueForKey.insert({key, value});
-			assert(p.second);
-			index++;
-		}
+	switch (dir) {
+	case Dir::Left:
+	case Dir::Right:
+		return profile.h;
+	case Dir::Up:
+	case Dir::Down:
+		return profile.v;
 	}
+	assert(false);
+}
 
-	const auto charForDir = [] (const BoxProfile & profile, const Dir dir) {
-		switch (dir) {
-		case Dir::Left:
-		case Dir::Right:
-			return profile.h;
-		case Dir::Up:
-		case Dir::Down:
-			return profile.v;
-		}
-		assert(false);
-	};
 
-	for (const BoxProfile & profile : {kLightBoxProfile, kHeavyBoxProfile, kDoubleBoxProfile}) {
-		for (int i = 0; i < 16; ++i) {
-			QChar chars[4] = {' ', ' ', ' ', ' '};
-			for (const Dir dir : kAllDirs) {
-				if (i & (1 << int(dir))) {
-					chars[int(dir)] = charForDir(profile, dir);
-				}
-			}
-			const uint64_t key = keyForChars(chars[0], chars[1], chars[2], chars[3]);
-			const auto it = valueForKey.find(key);
-			if (i == 0) {
-				assert(it == valueForKey.end());
-			} else {
-				assert(!profile.hasSingle || it != valueForKey.end());
-			}
-		}
+uint64_t Loader::_keyForTag(const Tag & tag) noexcept
+{
+	uint64_t key;
+	for (const Dir dir : kAllDirs) {
+		assert(!tag[int(dir)].isNull());
+		reinterpret_cast<char16_t*>(&key)[int(dir)] = tag[int(dir)].unicode();
 	}
+	return key;
+};
+
+
+Loader::Loader() :
+	normalWallBoxProfile_(kHeavyBoxProfile),
+	shortWallBoxProfile_(kLightBoxProfile)
+{
 }
 
 
 Loader::CornerForTag Loader::_createCornerForTag() noexcept
 {
+#if 0
 	std::unordered_map<std::string_view, QStringView> map;
 
 	const auto list = [] (const std::function<void(const std::string_view & tag,
@@ -538,6 +457,87 @@ Loader::CornerForTag Loader::_createCornerForTag() noexcept
 		.tags = std::move(tags),
 		.map = std::move(map),
 	};
+#else
+	static constexpr int kLineCount = std::extent_v<decltype(kBoxSymbols)>;
+	static_assert((kLineCount % 3) == 0);
+
+	static constexpr int kRowCount = kLineCount / 3;
+
+	struct Row {
+		int count;
+		QString lines[3];
+	};
+
+	const auto rows = [] () -> std::array<Row, kRowCount> {
+		std::array<Row, kRowCount> rows;
+		for (int ri = 0; ri < kRowCount; ++ri) {
+			Row & row = rows[ri];
+			for (int i = 0; i < 3; ++i) {
+				const std::string_view & line = kBoxSymbols[ri * 3 + i];
+				const QString qline = QString::fromUtf8(line.data(), line.size());
+				assert((qline.length() % 3) == 0);
+				if (i == 0) {
+					row.count = qline.length() / 3;
+				} else {
+					assert(qline.length() / 3 == row.count);
+				}
+				row.lines[i] = qline;
+			}
+		}
+		return rows;
+	}();
+
+	std::unordered_map<uint64_t, QChar> corners;
+
+	int index = 0;
+	for (int ri = 0; ri < kRowCount; ++ri) {
+		const Row & row = rows[ri];
+		for (int i = 0; i < row.count; ++i) {
+			const uint64_t key = _keyForTag({
+				row.lines[1][i * 3 + 0],
+				row.lines[1][i * 3 + 2],
+				row.lines[0][i * 3 + 1],
+				row.lines[2][i * 3 + 1],
+			});
+			const QChar value = row.lines[1][i * 3 + 1];
+			assert(!value.isNull());
+			assert(value != ' ');
+			const auto p = corners.insert({key, value});
+			assert(p.second);
+			index++;
+		}
+	}
+
+	for (const BoxProfile & profile : {kLightBoxProfile, kHeavyBoxProfile, kDoubleBoxProfile}) {
+		for (int i = 0; i < 16; ++i) {
+			Tag tag = {' ', ' ', ' ', ' '};
+			int bits = 0;
+			for (const Dir dir : kAllDirs) {
+				if (i & (1 << int(dir))) {
+					tag[int(dir)] = _profileCharForDir(profile, dir);
+					bits++;
+				}
+			}
+			const uint64_t key = _keyForTag(tag);
+			const auto it = corners.find(key);
+			if (i == 0) {
+				assert(it == corners.end());
+			} else {
+				if (bits == 1) {
+					if (profile.hasSingle) {
+						assert(it != corners.end());
+					}
+				} else {
+					assert(it != corners.end());
+				}
+			}
+		}
+	}
+
+	return CornerForTag {
+		.corners = std::move(corners),
+	};
+#endif
 }
 
 
@@ -1056,7 +1056,7 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 			}
 			switch (wall.type) {
 			case Wall::Type::Normal:
-				return kHorzDefaultWall;
+				return kHorzWalls[0];
 			case Wall::Type::Escape:
 				return kHorzEscapeWall;
 			case Wall::Type::Switch:
@@ -1077,7 +1077,7 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 			}
 			switch (wall.type) {
 			case Wall::Type::Normal:
-				return kVertDefaultWall;
+				return kVertWalls[0];
 			case Wall::Type::Escape:
 				return kVertEscapeWall;
 			case Wall::Type::Switch:
@@ -1254,7 +1254,7 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 
 	// 	const auto tag = [&cornerTag] (const Wall * const wall, const Dir dir) {
 	// 		if (wall) {
-	// 			char & c= cornerTag[int(dir)];
+	// 			char & c = cornerTag[int(dir)];
 	// 			if (wall->type == Wall::Type::Normal) {
 	// 				c = 'n';
 	// 			} else if (wall->type == Wall::Type::Short) {
@@ -1278,35 +1278,70 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 	// 	return {};
 	// };
 
-	const auto makeCorner = [&map, this] (const Pos & pos) -> QStringView {
+	// const auto makeCorner = [&map, this] (const Pos & pos) -> QStringView {
+	// 	const Wall * const rwall = map.findWall(pos, Dir::Up);
+	// 	const Wall * const dwall = map.findWall(pos, Dir::Left);
+	// 	const Wall * const lwall = map.findWall(pos + Pos{-1, -1}, Dir::Down);
+	// 	const Wall * const uwall = map.findWall(pos + Pos{-1, -1}, Dir::Right);
+
+	// 	char cornerTag[4] = {' ', ' ', ' ', ' '};
+
+	// 	const auto tag = [&cornerTag] (const Wall * const wall, const Dir dir) {
+	// 		if (wall) {
+	// 			char & c = cornerTag[int(dir)];
+	// 			if (wall->type == Wall::Type::Normal) {
+	// 				c = 'n';
+	// 			} else if (wall->type == Wall::Type::Short) {
+	// 				c = 's';
+	// 			} else if (wall->type == Wall::Type::Zap) {
+	// 				c = 'z';
+	// 			}
+	// 		}
+	// 	};
+
+	// 	tag(lwall, Dir::Left);
+	// 	tag(rwall, Dir::Right);
+	// 	tag(uwall, Dir::Up);
+	// 	tag(dwall, Dir::Down);
+
+	// 	const auto it = cornerForTag_.map.find(std::string_view(cornerTag,
+	// 			std::extent_v<decltype(cornerTag)>));
+	// 	if (it != cornerForTag_.map.end()) {
+	// 		return it->second;
+	// 	}
+	// 	return {};
+	// };
+
+	const auto makeCorner = [&map, this] (const Pos & pos) -> QChar {
 		const Wall * const rwall = map.findWall(pos, Dir::Up);
 		const Wall * const dwall = map.findWall(pos, Dir::Left);
 		const Wall * const lwall = map.findWall(pos + Pos{-1, -1}, Dir::Down);
 		const Wall * const uwall = map.findWall(pos + Pos{-1, -1}, Dir::Right);
 
-		char cornerTag[4] = {' ', ' ', ' ', ' '};
+		Tag tag = {' ', ' ', ' ', ' '};
 
-		const auto tag = [&cornerTag] (const Wall * const wall, const Dir dir) {
+		const auto t = [&tag, this] (const Wall * const wall, const Dir dir) {
 			if (wall) {
-				char & c= cornerTag[int(dir)];
+				QChar & c = tag[int(dir)];
 				if (wall->type == Wall::Type::Normal) {
-					c = 'n';
+					c = _profileCharForDir(normalWallBoxProfile_, dir);
 				} else if (wall->type == Wall::Type::Short) {
-					c = 's';
+					c = _profileCharForDir(shortWallBoxProfile_, dir);
 				} else if (wall->type == Wall::Type::Zap) {
 					c = 'z';
 				}
 			}
 		};
 
-		tag(lwall, Dir::Left);
-		tag(rwall, Dir::Right);
-		tag(uwall, Dir::Up);
-		tag(dwall, Dir::Down);
+		t(lwall, Dir::Left);
+		t(rwall, Dir::Right);
+		t(uwall, Dir::Up);
+		t(dwall, Dir::Down);
 
-		const auto it = cornerForTag_.map.find(std::string_view(cornerTag,
-				std::extent_v<decltype(cornerTag)>));
-		if (it != cornerForTag_.map.end()) {
+		const uint64_t key = _keyForTag(tag);
+
+		const auto it = cornerForTag_.corners.find(key);
+		if (it != cornerForTag_.corners.end()) {
 			return it->second;
 		}
 		return {};
@@ -1315,9 +1350,9 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 	for (int y = 0; y <= map.height; ++y) {
 		for (int x = 0; x <= map.width; ++x) {
 			QChar * const s = corner(Pos{x, y});
-			const QStringView c = makeCorner(Pos{x, y});
-			if (!c.empty()) {
-				*s = c[0];
+			const QChar c = makeCorner(Pos{x, y});
+			if (!c.isNull()) {
+				*s = c;
 			}
 		}
 	}
