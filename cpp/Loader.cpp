@@ -147,14 +147,21 @@ static const std::array<QString, 2> kVertShortWalls = {
 	QString::fromUtf8("|"),
 };
 
+static const std::array<QString, 2> kHorzZapWalls = {
+	QString::fromUtf8("⚡︎⚡︎"),
+	QString::fromUtf8("zz"),
+};
+static const std::array<QString, 2> kVertZapWalls = {
+	QString::fromUtf8("⚡︎"),
+	QString::fromUtf8("z"),
+};
+
 static const QString kHorzWinWall    = QString::fromUtf8("!!");
 static const QString kVertWinWall    = QString::fromUtf8("!");
 static const QString kHorzEscapeWall = QString::fromUtf8("ee");
 static const QString kVertEscapeWall = QString::fromUtf8("e");
 static const QString kHorzSwitchWall = QString::fromUtf8(">>");
 static const QString kVertSwitchWall = QString::fromUtf8(">");
-static const QString kHorzZapWall    = QString::fromUtf8("zz");
-static const QString kVertZapWall    = QString::fromUtf8("z");
 
 struct CornerBoxSolid {
 	QChar leftRight;
@@ -186,6 +193,7 @@ struct CornerBoxShift {
 	QChar upToRight;
 };
 
+#if 0
 static CornerBoxSolid kDoubleCornerBoxSolid {
 	.leftRight     = uqchar("═"),
 	.upDown        = uqchar("║"),
@@ -259,6 +267,7 @@ static CornerBoxShift kLightToDoubleBoxShift {
 	.upToLeft        = uqchar("╛"),
 	.upToRight       = uqchar("╘"),
 };
+#endif
 
 static const QString kCornerNormalLeftRight     = QString::fromUtf8("═");
 static const QString kCornerNormalUpDown        = QString::fromUtf8("║");
@@ -396,13 +405,13 @@ QChar Loader::_profileCharForDir(const Loader::BoxProfile & profile, const Dir d
 
 uint64_t Loader::_keyForTag(const Tag & tag) noexcept
 {
-	uint64_t key;
+	uint64_t key = 0;
 	for (const Dir dir : kAllDirs) {
 		assert(!tag[int(dir)].isNull());
 		reinterpret_cast<char16_t*>(&key)[int(dir)] = tag[int(dir)].unicode();
 	}
 	return key;
-};
+}
 
 
 Loader::Loader() :
@@ -748,7 +757,7 @@ Map Loader::_createMap(Map::Info && info, std::vector<QString> && lines) noexcep
 					.pos = Pos{x, y},
 					.win = true,
 				});
-			} else if (wall == kHorzZapWall) {
+			} else if (listContains(kHorzZapWalls, wall)) {
 				hwalls.push_back(Wall {
 					.type = Wall::Type::Zap,
 					.pos = Pos{x, y},
@@ -791,7 +800,7 @@ Map Loader::_createMap(Map::Info && info, std::vector<QString> && lines) noexcep
 					.pos = Pos{x, y},
 					.win = true,
 				});
-			} else if (wall == kVertZapWall) {
+			} else if (listContains(kVertZapWalls, wall)) {
 				vwalls.push_back(Wall {
 					.type = Wall::Type::Zap,
 					.pos = Pos{x, y},
@@ -1063,8 +1072,16 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 				return kHorzSwitchWall;
 			case Wall::Type::Short:
 				return kHorzShortWalls[0];
-			case Wall::Type::Zap:
-				return kHorzZapWall;
+			case Wall::Type::Zap: {
+				QString zs = QString::fromUtf8("⚡︎");
+				// QString zs = QString::fromUtf8("⚡");
+				// QString zs = QString::fromUtf8("⌁");
+				// QString zs = QString::fromUtf8("z");
+				int zsl = zs.length();
+				QStringView zz = kVertZapWalls[0];
+				int zzl = zz.length();
+				return kHorzZapWalls[0];
+			}
 			}
 			assert(false);
 		}());
@@ -1085,7 +1102,7 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 			case Wall::Type::Short:
 				return kVertShortWalls[0];
 			case Wall::Type::Zap:
-				return kVertZapWall;
+				return kVertZapWalls[0];
 			}
 			assert(false);
 		}());
@@ -1353,6 +1370,8 @@ std::vector<QString> Loader::convert(const Map & map) const noexcept
 			const QChar c = makeCorner(Pos{x, y});
 			if (!c.isNull()) {
 				*s = c;
+			} else {
+				*s = '$';
 			}
 		}
 	}
